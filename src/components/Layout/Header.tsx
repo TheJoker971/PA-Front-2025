@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Building2, Sparkles } from 'lucide-react';
+import { ConnectWallet, useAddress, useDisconnect } from '@thirdweb-dev/react';
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -9,6 +10,9 @@ const Header: React.FC = () => {
   const isDashboardRoute = location.pathname.startsWith('/dashboard');
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isOwnerRoute = location.pathname.startsWith('/owner');
+
+  const address = useAddress();
+  const disconnect = useDisconnect();
 
   return (
     <header className="bg-white/95 backdrop-blur-sm shadow-xl border-b border-indigo-100 sticky top-0 z-50">
@@ -88,7 +92,18 @@ const Header: React.FC = () => {
           </nav>
 
           <div className="flex items-center space-x-4">
-            {/* Navigation actions can be added here if needed */}
+            <ConnectWallet />
+            {address && (
+              <div className="ml-2 text-sm text-gray-600">
+                <span className="font-medium">Connecté</span>
+                <button 
+                  onClick={disconnect}
+                  className="ml-2 text-red-500 hover:text-red-700 font-medium"
+                >
+                  Déconnexion
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
