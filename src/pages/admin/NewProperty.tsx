@@ -1,311 +1,274 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Upload, Plus, X, Building2, DollarSign, Percent, MapPin, FileText, Sparkles } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Building2, MapPin, DollarSign, Users, Calendar, Sparkles, FileText } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
+import ImageUploader from '../../components/common/ImageUploader';
+import ImageGallery from '../../components/common/ImageGallery';
+import DocumentGallery from '../../components/common/DocumentGallery';
 
 const NewProperty: React.FC = () => {
+  const navigate = useNavigate();
+  const { showToast } = useNotification();
+  
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
     location: '',
-    propertyType: 'residential',
-    totalValue: '',
+    description: '',
+    price: '',
     tokenPrice: '',
-    annualYield: '',
-    images: [] as string[],
-    documents: [] as string[]
+    totalTokens: '',
+    expectedReturn: '',
+    mainImage: '',
+    galleryImages: [] as string[],
+    documents: [] as string[],
   });
-  const { showToast, showModal } = useNotification();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleMainImageUploaded = (url: string) => {
+    setFormData(prev => ({ ...prev, mainImage: url }));
+  };
+
+  const handleGalleryImagesChange = (urls: string[]) => {
+    setFormData(prev => ({ ...prev, galleryImages: urls }));
+  };
+
+  const handleDocumentsChange = (urls: string[]) => {
+    setFormData(prev => ({ ...prev, documents: urls }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const confirmed = await showModal({
-      type: 'confirm',
-      title: 'Create Property',
-      message: `Are you sure you want to create "${formData.name}"? This will add it directly to the platform as an active property.`,
-      confirmText: 'Create Property',
-      cancelText: 'Continue Editing'
-    });
-
-    if (confirmed) {
+    // Validation simple
+    if (!formData.name || !formData.location || !formData.mainImage || formData.documents.length === 0) {
       showToast({
-        type: 'success',
-        title: 'Property Created Successfully!',
-        message: `"${formData.name}" has been created and is now available for investment.`
+        type: 'error',
+        title: 'Formulaire incomplet',
+        message: 'Veuillez remplir tous les champs obligatoires, ajouter une image principale et au moins un document.'
       });
-      
-      // Reset form
-      setFormData({
-        name: '',
-        description: '',
-        location: '',
-        propertyType: 'residential',
-        totalValue: '',
-        tokenPrice: '',
-        annualYield: '',
-        images: [],
-        documents: []
-      });
+      return;
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
+    
+    // Ici, vous enverriez les données au backend ou à la blockchain
+    console.log('Données du formulaire:', formData);
+    
+    // Simulation de succès
+    showToast({
+      type: 'success',
+      title: 'Propriété créée',
+      message: 'La propriété a été créée avec succès et est en attente de validation.'
     });
-  };
-
-  const calculateTokens = () => {
-    if (formData.totalValue && formData.tokenPrice) {
-      return Math.floor(Number(formData.totalValue) / Number(formData.tokenPrice));
-    }
-    return 0;
-  };
-
-  const calculateMinInvestment = () => {
-    return formData.tokenPrice ? Number(formData.tokenPrice) : 0;
+    
+    // Rediriger vers la liste des propriétés
+    navigate('/admin/properties');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Link
-          to="/admin/properties"
-          className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-8 group bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-        >
-          <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-semibold">Back to Properties</span>
-        </Link>
-
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white">
-            <div className="flex items-center">
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 mr-4">
-                <Building2 className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Add New Property</h1>
-                <p className="text-indigo-100 text-lg">Create a new tokenized property listing for investors</p>
-              </div>
+    <div className="container mx-auto px-4 py-8 bg-gradient-to-br from-gray-50 via-white to-indigo-50">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Créer une nouvelle propriété</h1>
+        <p className="text-gray-600 mt-2">Remplissez le formulaire ci-dessous pour ajouter une nouvelle propriété</p>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100 shadow-lg">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+            <Building2 className="h-6 w-6 mr-3 text-indigo-600" />
+            Informations générales
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-2">
+                Nom de la propriété *
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                required
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="location" className="block text-sm font-bold text-gray-700 mb-2">
+                Emplacement *
+              </label>
+              <input
+                type="text"
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                required
+              />
+            </div>
+            
+            <div className="md:col-span-2">
+              <label htmlFor="description" className="block text-sm font-bold text-gray-700 mb-2">
+                Description *
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={4}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                required
+              />
             </div>
           </div>
+        </div>
+        
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100 shadow-lg">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+            <DollarSign className="h-6 w-6 mr-3 text-emerald-600" />
+            Informations financières
+          </h2>
           
-          <form onSubmit={handleSubmit} className="p-8 space-y-8">
-            {/* Basic Information */}
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <Building2 className="h-6 w-6 mr-3 text-indigo-600" />
-                Basic Information
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">
-                    Property Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors font-medium"
-                    placeholder="Manhattan Office Complex"
-                  />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label htmlFor="price" className="block text-sm font-bold text-gray-700 mb-2">
+                Prix total (€) *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500">€</span>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">
-                    <MapPin className="h-4 w-4 inline mr-1" />
-                    Location *
-                  </label>
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors font-medium"
-                    placeholder="New York, NY"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="block text-sm font-bold text-gray-700 mb-3">
-                  Property Type *
-                </label>
-                <select
-                  name="propertyType"
-                  value={formData.propertyType}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors font-medium"
-                >
-                  <option value="residential">Residential</option>
-                  <option value="commercial">Commercial</option>
-                  <option value="industrial">Industrial</option>
-                </select>
-              </div>
-
-              <div className="mt-6">
-                <label className="block text-sm font-bold text-gray-700 mb-3">
-                  Description *
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
+                <input
+                  type="number"
+                  id="price"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  className="w-full pl-8 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                   required
-                  rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors font-medium"
-                  placeholder="Detailed description of the property, its features, and investment potential..."
                 />
               </div>
             </div>
-
-            {/* Financial Details */}
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <DollarSign className="h-6 w-6 mr-3 text-emerald-600" />
-                Financial Details
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">
-                    Total Property Value ($) *
-                  </label>
-                  <input
-                    type="number"
-                    name="totalValue"
-                    value={formData.totalValue}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors font-medium"
-                    placeholder="5000000"
-                  />
+            
+            <div>
+              <label htmlFor="tokenPrice" className="block text-sm font-bold text-gray-700 mb-2">
+                Prix par token (€) *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500">€</span>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">
-                    Token Price ($) *
-                  </label>
-                  <input
-                    type="number"
-                    name="tokenPrice"
-                    value={formData.tokenPrice}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors font-medium"
-                    placeholder="100"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">
-                    <Percent className="h-4 w-4 inline mr-1" />
-                    Annual Yield (%) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="annualYield"
-                    value={formData.annualYield}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors font-medium"
-                    placeholder="8.5"
-                  />
-                </div>
+                <input
+                  type="number"
+                  id="tokenPrice"
+                  name="tokenPrice"
+                  value={formData.tokenPrice}
+                  onChange={handleInputChange}
+                  className="w-full pl-8 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  required
+                />
               </div>
-
-              {/* Calculation Preview */}
-              {formData.totalValue && formData.tokenPrice && (
-                <div className="mt-6 bg-white rounded-2xl p-6 border border-emerald-200">
-                  <h3 className="font-bold text-gray-900 mb-4 flex items-center">
-                    <Sparkles className="h-5 w-5 mr-2 text-emerald-600" />
-                    Tokenization Preview
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium">Total Tokens</p>
-                      <p className="text-2xl font-bold text-emerald-600">{calculateTokens().toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium">Min Investment</p>
-                      <p className="text-2xl font-bold text-emerald-600">${calculateMinInvestment()}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium">Est. Annual Return per Token</p>
-                      <p className="text-2xl font-bold text-emerald-600">
-                        ${formData.annualYield ? ((Number(formData.tokenPrice) * Number(formData.annualYield)) / 100).toFixed(2) : '0'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
-
-            {/* File Uploads */}
-            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-6 border border-cyan-100">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <FileText className="h-6 w-6 mr-3 text-cyan-600" />
-                Media & Documents
-              </h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">
-                    Property Images *
-                  </label>
-                  <div className="border-2 border-dashed border-cyan-300 rounded-2xl p-8 text-center bg-white hover:bg-cyan-50 transition-colors cursor-pointer">
-                    <Upload className="h-12 w-12 text-cyan-400 mx-auto mb-4" />
-                    <p className="text-gray-700 font-medium">Click to upload images or drag and drop</p>
-                    <p className="text-sm text-gray-500 mt-2">PNG, JPG, GIF up to 10MB each</p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">
-                    Legal Documents *
-                  </label>
-                  <div className="border-2 border-dashed border-cyan-300 rounded-2xl p-8 text-center bg-white hover:bg-cyan-50 transition-colors cursor-pointer">
-                    <Upload className="h-12 w-12 text-cyan-400 mx-auto mb-4" />
-                    <p className="text-gray-700 font-medium">Upload property documents</p>
-                    <p className="text-sm text-gray-500 mt-2">PDF files up to 50MB each</p>
-                  </div>
+            
+            <div>
+              <label htmlFor="expectedReturn" className="block text-sm font-bold text-gray-700 mb-2">
+                Rendement attendu (%) *
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  id="expectedReturn"
+                  name="expectedReturn"
+                  value={formData.expectedReturn}
+                  onChange={handleInputChange}
+                  step="0.1"
+                  className="w-full pr-8 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  required
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500">%</span>
                 </div>
               </div>
             </div>
-
-            {/* Submit Section */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold mb-2">Ready to Create Property?</h3>
-                  <p className="text-indigo-100">This property will be immediately available for investment.</p>
-                </div>
-                <div className="flex space-x-4">
-                  <Link
-                    to="/admin/properties"
-                    className="px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-2xl hover:bg-white/30 transition-all duration-300 font-semibold"
-                  >
-                    Cancel
-                  </Link>
-                  <button
-                    type="submit"
-                    className="px-8 py-3 bg-white text-indigo-600 rounded-2xl hover:bg-gray-50 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    Create Property
-                  </button>
-                </div>
-              </div>
+            
+            <div>
+              <label htmlFor="totalTokens" className="block text-sm font-bold text-gray-700 mb-2">
+                Nombre total de tokens *
+              </label>
+              <input
+                type="number"
+                id="totalTokens"
+                name="totalTokens"
+                value={formData.totalTokens}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                required
+              />
             </div>
-          </form>
+          </div>
         </div>
-      </div>
+        
+        <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-6 border border-cyan-100 shadow-lg">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+            <FileText className="h-6 w-6 mr-3 text-cyan-600" />
+            Images et documents
+          </h2>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-3">
+                Image principale *
+              </label>
+              <ImageUploader
+                onImageUploaded={handleMainImageUploaded}
+                initialImage={formData.mainImage}
+                folder="properties/admin/main"
+                className="max-w-md"
+                maxSizeMB={10}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-3">
+                Images supplémentaires
+              </label>
+              <ImageGallery
+                onImagesChange={handleGalleryImagesChange}
+                initialImages={formData.galleryImages}
+                maxImages={5}
+                folder="properties/admin/gallery"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-3">
+                Documents légaux *
+              </label>
+              <DocumentGallery
+                onDocumentsChange={handleDocumentsChange}
+                initialDocuments={formData.documents}
+                maxDocuments={5}
+                folder="properties/admin/documents"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1"
+          >
+            Créer la propriété
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

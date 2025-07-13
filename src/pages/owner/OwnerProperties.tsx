@@ -236,9 +236,12 @@ const OwnerProperties: React.FC = () => {
                     <Eye className="h-4 w-4 mr-2" />
                     View
                   </Link>
-                  <button className="bg-gray-100 text-gray-700 py-3 px-4 rounded-2xl hover:bg-gray-200 transition-colors">
+                  <Link
+                    to={`/owner/properties/edit/${property.id}`}
+                    className="bg-gray-100 text-gray-700 py-3 px-4 rounded-2xl hover:bg-gray-200 transition-colors"
+                  >
                     <Edit className="h-4 w-4" />
-                  </button>
+                  </Link>
                   <button 
                     onClick={() => handleDelete(property.id, property.name)}
                     className="bg-red-100 text-red-700 py-3 px-4 rounded-2xl hover:bg-red-200 transition-colors"

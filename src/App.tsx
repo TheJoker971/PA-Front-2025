@@ -28,11 +28,13 @@ import AdminRewards from './pages/admin/AdminRewards';
 import AdminRoles from './pages/admin/AdminRoles';
 import PropertyValidation from './pages/admin/PropertyValidation';
 import PropertyReview from './pages/admin/PropertyReview';
+import SupabaseConfig from './pages/admin/SupabaseConfig';
 
 // Property Owner pages
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import OwnerProperties from './pages/owner/OwnerProperties';
 import OwnerNewProperty from './pages/owner/NewProperty';
+import EditProperty from './pages/owner/EditProperty';
 
 function App() {
   return (
@@ -60,6 +62,7 @@ function App() {
             <Route path="/owner" element={<OwnerDashboard />} />
             <Route path="/owner/properties" element={<OwnerProperties />} />
             <Route path="/owner/properties/new" element={<OwnerNewProperty />} />
+            <Route path="/owner/properties/edit/:propertyId" element={<EditProperty />} />
             
             {/* Admin routes */}
             <Route path="/admin" element={<AdminDashboard />} />
@@ -69,6 +72,7 @@ function App() {
             <Route path="/admin/roles" element={<AdminRoles />} />
             <Route path="/admin/validation" element={<PropertyValidation />} />
             <Route path="/admin/validation/:propertyId" element={<PropertyReview />} />
+            <Route path="/admin/supabase" element={<SupabaseConfig />} />
             
             {/* 404 route */}
             <Route path="*" element={<NotFound />} />
