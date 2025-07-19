@@ -1,7 +1,6 @@
 import React, { useState, useRef, ChangeEvent } from 'react';
-import { uploadImage } from '../../services/supabase';
+import { uploadFile } from '../../services/upload';
 import { Loader2, Upload, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
-import SupabaseErrorHandler from './SupabaseErrorHandler';
 
 interface ImageUploaderProps {
   onImageUploaded: (url: string) => void;
@@ -24,7 +23,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 }) => {
   const [image, setImage] = useState<string>(initialImage);
   const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,17 +50,17 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     setIsUploading(true);
 
     try {
-      const imageUrl = await uploadImage(file, folder, requireAuth);
-      
+      // Utilisation de Firebase Storage
+      const path = `${folder || 'properties'}/${Date.now()}-${file.name}`;
+      const imageUrl = await uploadFile(file, path);
       if (imageUrl) {
         setImage(imageUrl);
         onImageUploaded(imageUrl);
       } else {
-        setError(new Error('Échec du téléchargement de l\'image'));
+        setError('Échec du téléchargement de l’image');
       }
     } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err : new Error('Une erreur est survenue lors du téléchargement'));
+      setError('Une erreur est survenue lors du téléchargement');
     } finally {
       setIsUploading(false);
     }
@@ -79,13 +78,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     }
   };
 
-  // Vérifier si l'erreur est liée à une politique de sécurité RLS
-  const isRLSError = error?.message && (
-    error.message.includes('row-level security policy') ||
-    error.message.includes('violates row-level security') ||
-    error.message.includes('Unauthorized')
-  );
-
   return (
     <div className={`relative ${className}`}>
       <input
@@ -99,29 +91,21 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       {!image ? (
         <div 
           onClick={triggerFileInput}
-          className={`border-2 border-dashed ${isRLSError ? 'border-red-300' : 'border-gray-300'} rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors`}
+          className={`border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors`}
         >
           {isUploading ? (
             <Loader2 className="h-10 w-10 text-indigo-500 animate-spin" />
           ) : (
             <>
-              <div className={`${isRLSError ? 'bg-red-50' : 'bg-gradient-to-r from-indigo-100 to-purple-100'} rounded-2xl p-3 mb-3`}>
-                {isRLSError ? (
-                  <AlertTriangle className="h-8 w-8 text-red-500" />
-                ) : (
-                  <Upload className="h-8 w-8 text-indigo-600" />
-                )}
+              <div className={`bg-gradient-to-r from-indigo-100 to-purple-100 rounded-2xl p-3 mb-3`}>
+                <Upload className="h-8 w-8 text-indigo-600" />
               </div>
               <p className="text-base font-medium text-gray-700 text-center">
-                {isRLSError ? 'Erreur de permissions' : 'Cliquez pour télécharger une image'}
+                Cliquez pour télécharger une image
               </p>
               <p className="text-sm text-gray-600 mt-1 text-center">
-                {!isRLSError && (
-                  <>
-                    {acceptedTypes.replace(/image\//g, '').replace(/,/g, ', ')}
-                    {` (Max: ${maxSizeMB}MB)`}
-                  </>
-                )}
+                {acceptedTypes.replace(/image\//g, '').replace(/,/g, ', ')}
+                {` (Max: ${maxSizeMB}MB)`}
               </p>
             </>
           )}
@@ -147,8 +131,9 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       {validationError && (
         <p className="text-sm font-medium text-red-500 mt-2">{validationError}</p>
       )}
-      
-      {error && <SupabaseErrorHandler error={error} type="upload" />}
+      {error && (
+        <p className="text-sm font-medium text-red-500 mt-2">{error}</p>
+      )}
     </div>
   );
 };

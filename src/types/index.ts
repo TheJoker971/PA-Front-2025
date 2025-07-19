@@ -1,20 +1,20 @@
 export interface Property {
   id: string;
   name: string;
-  description: string;
+  image: string;
   location: string;
-  totalValue: number;
-  tokenPrice: number;
-  totalTokens: number;
-  availableTokens: number;
-  annualYield: number;
-  imageUrl: string;
-  status: 'active' | 'funded' | 'upcoming' | 'pending_approval';
-  propertyType: 'residential' | 'commercial' | 'industrial';
-  documents: string[];
-  ownerId?: string;
-  submittedDate?: Date;
-  approvedDate?: Date;
+  propertyType: string;
+  status: string;
+  price: number;
+  tokenAddress?: string;
+  imageUrl?: string;
+  description?: string;
+  totalValue?: number;
+  tokenPrice?: number;
+  annualYield?: number;
+  availableTokens?: number;
+  totalTokens?: number;
+  // Ajoute d'autres champs si besoin
 }
 
 export interface Investment {

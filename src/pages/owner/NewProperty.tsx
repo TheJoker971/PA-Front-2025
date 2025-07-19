@@ -5,6 +5,15 @@ import { useNotification } from '../../context/NotificationContext';
 import ImageUploader from '../../components/common/ImageUploader';
 import ImageGallery from '../../components/common/ImageGallery';
 import DocumentGallery from '../../components/common/DocumentGallery';
+import { uploadFile, uploadJson } from '../../services/upload';
+import PropertyFactoryABI from '../../abi/PropertyFactory.json';
+import { useAccount, useWriteContract } from 'wagmi';
+// Supprimer l’import de writeContract et config
+// import { writeContract } from '@wagmi/core';
+// import { config } from '../../providers/Web3Provider';
+
+// Adresse du contrat PropertyFactory (à adapter si besoin)
+const PROPERTY_FACTORY_ADDRESS = '0x836C1C6FE9f544324c6722d65B3206B6a3106A20'; // Adresse réelle déployée
 
 const NewProperty: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -20,47 +29,113 @@ const NewProperty: React.FC = () => {
     documents: [] as string[]
   });
   const { showToast, showModal } = useNotification();
+  const { address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation basique
-    if (!formData.name || !formData.location || !formData.mainImage || formData.images.length === 0 || formData.documents.length === 0) {
+    if (!formData.name || !formData.location || !formData.mainImage || formData.images.length === 0) {
       showToast({
         type: 'error',
         title: 'Formulaire incomplet',
-        message: 'Veuillez remplir tous les champs obligatoires et ajouter au moins une image et un document.'
+        message: 'Veuillez remplir tous les champs obligatoires et ajouter au moins une image.'
       });
       return;
     }
-    
-    const confirmed = await showModal({
-      type: 'confirm',
-      title: 'Submit Property for Review',
-      message: `Are you sure you want to submit "${formData.name}" for admin review? Once submitted, you won't be able to edit the property until it's reviewed.`,
-      confirmText: 'Submit for Review',
-      cancelText: 'Continue Editing'
-    });
-
-    if (confirmed) {
+    if (!address) {
       showToast({
-        type: 'success',
-        title: 'Property Submitted Successfully!',
-        message: `"${formData.name}" has been submitted for admin review. You'll be notified once it's approved and ready for investment.`
+        type: 'error',
+        title: 'Wallet non connecté',
+        message: 'Connectez votre wallet pour ajouter une propriété.'
       });
-      
-      // Reset form
-      setFormData({
-        name: '',
-        description: '',
-        location: '',
-        propertyType: 'residential',
-        totalValue: '',
-        tokenPrice: '',
-        annualYield: '',
-        mainImage: '',
-        images: [],
-        documents: []
+      return;
+    }
+    try {
+      showToast({ type: 'info', title: 'Upload en cours', message: 'Envoi des images sur Firebase...' });
+      // 1. Upload de l’image principale si c’est un fichier local (sinon déjà url)
+      let mainImageUrl = formData.mainImage;
+      // Correction TS : vérifier que ce n’est pas une string et que c’est bien un File
+      if (
+        formData.mainImage &&
+        typeof formData.mainImage !== 'string' &&
+        Object.prototype.toString.call(formData.mainImage) === '[object File]'
+      ) {
+        mainImageUrl = await uploadFile(formData.mainImage, `properties/${Date.now()}-main.jpg`);
+      }
+      // 2. Upload des images supplémentaires si besoin
+      const imagesUrls = await Promise.all(
+        formData.images.map(async (img: any, idx: number) => {
+          if (typeof img === 'string') return img;
+          return uploadFile(img, `properties/${Date.now()}-img${idx}.jpg`);
+        })
+      );
+      // 3. Génération du JSON de métadonnées
+      const metadata = {
+        name: formData.name,
+        description: formData.description,
+        location: formData.location,
+        propertyType: formData.propertyType,
+        mainImage: mainImageUrl,
+        images: imagesUrls,
+        documents: formData.documents,
+        createdAt: new Date().toISOString()
+      };
+      // 4. Upload du JSON sur Firebase
+      showToast({ type: 'info', title: 'Upload des métadonnées', message: 'Envoi du JSON sur Firebase...' });
+      const metadataUri = await uploadJson(metadata, `properties/${Date.now()}-metadata.json`);
+      // 5. Préparation des paramètres pour le smart contract
+      const totalTokens = calculateTokens();
+      const unitPrice = formData.tokenPrice ? BigInt(Number(formData.tokenPrice) * 1e18) : 0n;
+      const totalValue = formData.totalValue ? BigInt(Number(formData.totalValue) * 1e18) : 0n;
+      const annualYield = formData.annualYield ? Math.round(Number(formData.annualYield) * 100) : 0; // 8% => 800
+      const erc20Name = `${formData.name} Shares`;
+      const erc20Symbol = formData.name.substring(0, 3).toUpperCase();
+      // 6. Appel on-chain
+      showToast({ type: 'info', title: 'Transaction en cours', message: 'Signature de la transaction...' });
+      const args = [
+        formData.name, // propertyName
+        metadataUri,   // propertyURI
+        totalValue,    // displayPrice
+        erc20Name,     // erc20Name
+        erc20Symbol,   // erc20Symbol
+        totalTokens,   // erc20MaxSupply
+        unitPrice,     // unitPrice
+        metadataUri,   // metadataURI
+        annualYield,   // annualYield (en basis points)
+        totalValue,    // propertyPrice
+        address        // admin
+      ];
+      console.log('Appel on-chain createFullProperty', args);
+      try {
+        const tx = await writeContractAsync({
+          address: PROPERTY_FACTORY_ADDRESS,
+          abi: PropertyFactoryABI.abi,
+          functionName: 'createFullProperty',
+          args
+        });
+        console.log('Transaction result:', tx);
+        showToast({
+          type: 'success',
+          title: 'Propriété ajoutée !',
+          message: `La propriété "${formData.name}" a été ajoutée on-chain avec succès.`
+        });
+        setFormData({
+          name: '', description: '', location: '', propertyType: 'residential', totalValue: '', tokenPrice: '', annualYield: '', mainImage: '', images: [], documents: []
+        });
+      } catch (err: any) {
+        console.error('Erreur on-chain', err);
+        showToast({
+          type: 'error',
+          title: 'Erreur',
+          message: err?.message || 'Une erreur est survenue lors de l’ajout on-chain.'
+        });
+      }
+    } catch (err: any) {
+      console.error('Erreur on-chain', err);
+      showToast({
+        type: 'error',
+        title: 'Erreur',
+        message: err?.message || 'Une erreur est survenue lors de l’ajout on-chain.'
       });
     }
   };

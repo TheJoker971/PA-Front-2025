@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Building2, Sparkles } from 'lucide-react';
-import { ConnectWallet, useAddress, useDisconnect } from '@thirdweb-dev/react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -10,9 +10,6 @@ const Header: React.FC = () => {
   const isDashboardRoute = location.pathname.startsWith('/dashboard');
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isOwnerRoute = location.pathname.startsWith('/owner');
-
-  const address = useAddress();
-  const disconnect = useDisconnect();
 
   return (
     <header className="bg-white/95 backdrop-blur-sm shadow-xl border-b border-indigo-100 sticky top-0 z-50">
@@ -41,7 +38,6 @@ const Header: React.FC = () => {
                 </Link>
               </>
             )}
-            
             {isDashboardRoute && (
               <>
                 <Link to="/dashboard" className="text-gray-700 hover:text-indigo-600 transition-colors font-medium px-4 py-2 rounded-xl hover:bg-indigo-50">
@@ -58,7 +54,6 @@ const Header: React.FC = () => {
                 </Link>
               </>
             )}
-            
             {isOwnerRoute && (
               <>
                 <Link to="/owner" className="text-gray-700 hover:text-emerald-600 transition-colors font-medium px-4 py-2 rounded-xl hover:bg-emerald-50">
@@ -72,7 +67,6 @@ const Header: React.FC = () => {
                 </Link>
               </>
             )}
-            
             {isAdminRoute && (
               <>
                 <Link to="/admin" className="text-gray-700 hover:text-indigo-600 transition-colors font-medium px-4 py-2 rounded-xl hover:bg-indigo-50">
@@ -95,18 +89,7 @@ const Header: React.FC = () => {
           </nav>
 
           <div className="flex items-center space-x-4">
-            <ConnectWallet />
-            {address && (
-              <div className="ml-2 text-sm text-gray-600">
-                <span className="font-medium">Connecté</span>
-                <button 
-                  onClick={disconnect}
-                  className="ml-2 text-red-500 hover:text-red-700 font-medium"
-                >
-                  Déconnexion
-                </button>
-              </div>
-            )}
+            <ConnectButton />
           </div>
         </div>
       </div>

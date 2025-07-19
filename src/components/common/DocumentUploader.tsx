@@ -1,7 +1,6 @@
 import React, { useState, useRef, ChangeEvent } from 'react';
-import { uploadDocument } from '../../services/supabase';
-import { Loader2, Upload, X, FileText, AlertTriangle } from 'lucide-react';
-import SupabaseErrorHandler from './SupabaseErrorHandler';
+import { uploadFile } from '../../services/upload';
+import { Loader2, Upload, X, FileText } from 'lucide-react';
 
 interface DocumentUploaderProps {
   onDocumentUploaded: (url: string) => void;
@@ -24,7 +23,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
 }) => {
   const [document, setDocument] = useState<string>(initialDocument);
   const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,17 +50,17 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     setIsUploading(true);
 
     try {
-      const documentUrl = await uploadDocument(file, folder, requireAuth);
-      
+      // Utilisation de Firebase Storage
+      const path = `${folder || 'documents'}/${Date.now()}-${file.name}`;
+      const documentUrl = await uploadFile(file, path);
       if (documentUrl) {
         setDocument(documentUrl);
         onDocumentUploaded(documentUrl);
       } else {
-        setError(new Error('Échec du téléchargement du document'));
+        setError('Échec du téléchargement du document');
       }
     } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err : new Error('Une erreur est survenue lors du téléchargement'));
+      setError('Une erreur est survenue lors du téléchargement');
     } finally {
       setIsUploading(false);
     }
@@ -78,13 +77,6 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       fileInputRef.current.value = '';
     }
   };
-
-  // Vérifier si l'erreur est liée à une politique de sécurité RLS
-  const isRLSError = error?.message && (
-    error.message.includes('row-level security policy') ||
-    error.message.includes('violates row-level security') ||
-    error.message.includes('Unauthorized')
-  );
 
   // Extraire le nom du fichier de l'URL
   const getDocumentName = () => {
@@ -111,28 +103,20 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       {!document ? (
         <div 
           onClick={triggerFileInput}
-          className={`border-2 border-dashed ${isRLSError ? 'border-red-300' : 'border-gray-300'} rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors`}
+          className={`border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors`}
         >
           {isUploading ? (
             <Loader2 className="h-10 w-10 text-indigo-500 animate-spin" />
           ) : (
             <>
-              <div className={`${isRLSError ? 'bg-red-50' : 'bg-gradient-to-r from-cyan-100 to-blue-100'} rounded-2xl p-3 mb-3`}>
-                {isRLSError ? (
-                  <AlertTriangle className="h-8 w-8 text-red-500" />
-                ) : (
-                  <FileText className="h-8 w-8 text-cyan-600" />
-                )}
+              <div className={`bg-gradient-to-r from-cyan-100 to-blue-100 rounded-2xl p-3 mb-3`}>
+                <FileText className="h-8 w-8 text-cyan-600" />
               </div>
               <p className="text-base font-medium text-gray-700 text-center">
-                {isRLSError ? 'Erreur de permissions' : 'Cliquez pour télécharger un document'}
+                Cliquez pour télécharger un document
               </p>
               <p className="text-sm text-gray-600 mt-1 text-center">
-                {!isRLSError && (
-                  <>
-                    PDF, Word {` (Max: ${maxSizeMB}MB)`}
-                  </>
-                )}
+                PDF, Word {` (Max: ${maxSizeMB}MB)`}
               </p>
             </>
           )}
@@ -169,8 +153,9 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       {validationError && (
         <p className="text-sm font-medium text-red-500 mt-2">{validationError}</p>
       )}
-      
-      {error && <SupabaseErrorHandler error={error} type="upload" />}
+      {error && (
+        <p className="text-sm font-medium text-red-500 mt-2">{error}</p>
+      )}
     </div>
   );
 };
