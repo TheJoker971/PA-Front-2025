@@ -25,6 +25,7 @@ import DashboardProperties from './pages/dashboard/DashboardProperties';
 import Claims from './pages/dashboard/Claims';
 import Transactions from './pages/dashboard/Transactions';
 import DashboardOnChain from './pages/DashboardOnChain';
+import DashboardPropertiesOnChain from './pages/dashboard/DashboardPropertiesOnChain';
 
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -88,6 +89,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard-onchain" element={<DashboardOnChain />} />
             <Route path="/dashboard/properties" element={<DashboardProperties />} />
+            <Route path="/dashboard/properties-onchain" element={<DashboardPropertiesOnChain />} />
             <Route path="/dashboard/claims" element={<Claims />} />
             <Route path="/dashboard/transactions" element={<Transactions />} />
             {/* Property Owner routes */}
