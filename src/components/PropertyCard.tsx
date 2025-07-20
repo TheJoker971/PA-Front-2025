@@ -93,15 +93,19 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
                 style={{ width: `${fundingProgress}%` }}
               ></div>
             </div>
-            <div className="text-sm text-gray-500 font-medium">
-              {property.availableTokens.toLocaleString()} of {property.totalTokens.toLocaleString()} tokens available
+            <div className="flex justify-between items-center text-gray-500 text-sm mt-2">
+              <span>
+                {property.tokenAddress && property.decimals !== undefined
+                  ? `${(property.availableTokens ?? 0).toLocaleString()} of ${(property.totalTokens ?? 0).toLocaleString()} tokens available`
+                  : `${(property.availableTokens ?? 0).toLocaleString()} of ${(property.totalTokens ?? 0).toLocaleString()} tokens available`}
+              </span>
             </div>
           </div>
         </div>
         
         <div className="mt-8">
           <Link
-            to={`/properties/${property.id}`}
+            to={property.tokenAddress ? `/onchain-properties/${property.id}` : `/properties/${property.id}`}
             className="group/btn w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 text-center block font-semibold text-lg shadow-xl hover:shadow-indigo-500/25 transform hover:scale-105"
           >
             <span className="flex items-center justify-center">

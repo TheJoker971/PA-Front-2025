@@ -110,13 +110,13 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           ) : (
             <>
               <div className={`bg-gradient-to-r from-cyan-100 to-blue-100 rounded-2xl p-3 mb-3`}>
-                <FileText className="h-8 w-8 text-cyan-600" />
+                  <FileText className="h-8 w-8 text-cyan-600" />
               </div>
               <p className="text-base font-medium text-gray-700 text-center">
                 Cliquez pour télécharger un document
               </p>
               <p className="text-sm text-gray-600 mt-1 text-center">
-                PDF, Word {` (Max: ${maxSizeMB}MB)`}
+                    PDF, Word {` (Max: ${maxSizeMB}MB)`}
               </p>
             </>
           )}

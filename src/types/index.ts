@@ -14,6 +14,7 @@ export interface Property {
   annualYield?: number;
   availableTokens?: number;
   totalTokens?: number;
+  decimals?: number;
   // Ajoute d'autres champs si besoin
 }
 

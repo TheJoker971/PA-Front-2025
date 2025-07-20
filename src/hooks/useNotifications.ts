@@ -38,11 +38,14 @@ export const useNotifications = (): NotificationHook => {
           setModal(null);
           resolve(false);
         },
-        onConfirm: modalData.onConfirm ? () => {
-          if (modalData.onConfirm) modalData.onConfirm();
+        onConfirm: () => {
+          console.log('DEBUG: useNotifications onConfirm called');
+          if (modalData.onConfirm) {
+            modalData.onConfirm();
+          }
           setModal(null);
           resolve(true);
-        } : undefined
+        }
       });
     });
   }, []);

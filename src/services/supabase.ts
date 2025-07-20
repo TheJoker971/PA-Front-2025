@@ -5,11 +5,11 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Vérifier si les variables d'environnement sont définies
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    'Les variables d\'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY doivent être définies dans le fichier .env.local'
-  );
-}
+// if (!supabaseUrl || !supabaseAnonKey) {
+//   console.error(
+//     'Les variables d\'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY doivent être définies dans le fichier .env.local'
+//   );
+// }
 
 // Options supplémentaires pour le client Supabase
 const supabaseOptions = {

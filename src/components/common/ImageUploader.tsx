@@ -98,14 +98,14 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
           ) : (
             <>
               <div className={`bg-gradient-to-r from-indigo-100 to-purple-100 rounded-2xl p-3 mb-3`}>
-                <Upload className="h-8 w-8 text-indigo-600" />
+                  <Upload className="h-8 w-8 text-indigo-600" />
               </div>
               <p className="text-base font-medium text-gray-700 text-center">
                 Cliquez pour télécharger une image
               </p>
               <p className="text-sm text-gray-600 mt-1 text-center">
-                {acceptedTypes.replace(/image\//g, '').replace(/,/g, ', ')}
-                {` (Max: ${maxSizeMB}MB)`}
+                    {acceptedTypes.replace(/image\//g, '').replace(/,/g, ', ')}
+                    {` (Max: ${maxSizeMB}MB)`}
               </p>
             </>
           )}

@@ -112,6 +112,7 @@ const Modal: React.FC<ModalProps> = ({
             <button
               type="button"
               onClick={() => {
+                console.log('DEBUG: Modal onConfirm called');
                 if (onConfirm) onConfirm();
                 onClose();
               }}

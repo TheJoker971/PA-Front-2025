@@ -4,6 +4,8 @@ import PropertyCard from '../components/PropertyCard';
 import { Property } from '../types';
 import PropertySharesABI from '../abi/PropertyShares.json';
 import { useContractRead } from 'wagmi';
+import { ethers } from 'ethers';
+import { usePublicClient } from 'wagmi';
 
 const OnChainProperties: React.FC = () => {
   const { data: count, isLoading: isCountLoading } = usePropertiesCount();
@@ -34,6 +36,7 @@ const OnChainPropertyCard: React.FC<{ propertyId: number }> = ({ propertyId }) =
   const { data, isLoading } = useProperty(propertyId);
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(false);
+  const publicClient = usePublicClient();
 
   // Ajout : lecture du unitPrice et annualYield du PropertyShares
   const shareToken = (data as any)?.shareToken;
@@ -62,6 +65,18 @@ const OnChainPropertyCard: React.FC<{ propertyId: number }> = ({ propertyId }) =
         console.log('Fetch body:', text);
         let meta: Record<string, any> = {};
         try { meta = JSON.parse(text); } catch (e) { console.error('JSON parse error', e); }
+        let decimals = 18;
+        let totalTokens = tuple.totalShares ? Number(tuple.totalShares) : 0;
+        let availableTokens = tuple.totalShares ? Number(tuple.totalShares) : 0;
+        if (shareToken && publicClient) {
+          try {
+            const provider = new ethers.providers.JsonRpcProvider(publicClient.transport.url);
+            const contract = new ethers.Contract(shareToken, PropertySharesABI.abi, provider);
+            decimals = await contract.decimals();
+            totalTokens = totalTokens / 10 ** decimals;
+            availableTokens = availableTokens / 10 ** decimals;
+          } catch (e) { console.error('Erreur lecture decimals PropertyShares', e); }
+        }
         setProperty({
           id: propertyId.toString(),
           name: tuple.name || tuple.propertyName || '',
@@ -74,8 +89,9 @@ const OnChainPropertyCard: React.FC<{ propertyId: number }> = ({ propertyId }) =
           totalValue: tuple.propertyPrice ? Number(tuple.propertyPrice) / 1e18 : (tuple.price ? Number(tuple.price) / 1e18 : 0),
           tokenPrice: unitPrice ? Number(unitPrice) / 1e18 : 0,
           annualYield: annualYield ? Number(annualYield) / 100 : 0,
-          availableTokens: tuple.totalShares ? Number(tuple.totalShares) : 0,
-          totalTokens: tuple.totalShares ? Number(tuple.totalShares) : 0,
+          availableTokens,
+          totalTokens,
+          decimals,
           tokenAddress: tuple.shareToken || tuple.erc20Address || '',
           price: tuple.price ? Number(tuple.price) / 1e18 : 0,
         });
