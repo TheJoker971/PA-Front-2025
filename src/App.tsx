@@ -36,12 +36,16 @@ import AdminRoles from './pages/admin/AdminRoles';
 import PropertyValidation from './pages/admin/PropertyValidation';
 import PropertyReview from './pages/admin/PropertyReview';
 import SupabaseConfig from './pages/admin/SupabaseConfig';
+import AdminPropertiesOnChain from './pages/admin/AdminPropertiesOnChain';
+import AdminRewardsOnChain from './pages/admin/AdminRewardsOnChain';
 
 // Property Owner pages
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import OwnerProperties from './pages/owner/OwnerProperties';
 import OwnerNewProperty from './pages/owner/NewProperty';
 import EditProperty from './pages/owner/EditProperty';
+import OwnerDashboardOnChain from './pages/owner/OwnerDashboardOnChain';
+import OwnerPropertiesOnChain from './pages/owner/OwnerPropertiesOnChain';
 
 import { WagmiProvider, createConfig } from 'wagmi';
 import { sepolia } from 'wagmi/chains';
@@ -94,14 +98,18 @@ function App() {
             <Route path="/dashboard/transactions" element={<Transactions />} />
             {/* Property Owner routes */}
             <Route path="/owner" element={<OwnerDashboard />} />
+            <Route path="/owner-onchain" element={<OwnerDashboardOnChain />} />
             <Route path="/owner/properties" element={<OwnerProperties />} />
+            <Route path="/owner/properties-onchain" element={<OwnerPropertiesOnChain />} />
             <Route path="/owner/properties/new" element={<OwnerNewProperty />} />
             <Route path="/owner/properties/edit/:propertyId" element={<EditProperty />} />
             {/* Admin routes */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/properties" element={<AdminProperties />} />
+            <Route path="/admin/properties-onchain" element={<AdminPropertiesOnChain />} />
             <Route path="/admin/properties/new" element={<NewProperty />} />
             <Route path="/admin/rewards" element={<AdminRewards />} />
+            <Route path="/admin/rewards-onchain" element={<AdminRewardsOnChain />} />
             <Route path="/admin/roles" element={<AdminRoles />} />
             <Route path="/admin/validation" element={<PropertyValidation />} />
             <Route path="/admin/validation/:propertyId" element={<PropertyReview />} />
