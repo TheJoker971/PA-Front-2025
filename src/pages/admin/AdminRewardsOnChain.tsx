@@ -8,25 +8,6 @@ import PropertySharesABI from '../../abi/PropertyShares.json';
 const IMMO_PROPERTY_ADDRESS = import.meta.env.VITE_IMMO_PROPERTY_ADDRESS;
 const PROPERTY_FACTORY_ADDRESS = '0x836C1C6FE9f544324c6722d65B3206B6a3106A20';
 
-const recentDistributions = [
-  {
-    id: '1',
-    property: { name: 'Manhattan Office Complex' },
-    amount: 125000,
-    period: 'Q3 2024',
-    date: new Date('2024-09-30'),
-    status: 'completed'
-  },
-  {
-    id: '2',
-    property: { name: 'Beverly Hills Residential' },
-    amount: 85000,
-    period: 'Q3 2024',
-    date: new Date('2024-09-30'),
-    status: 'completed'
-  }
-];
-
 function calculateMonthlyRevenue(propertyPrice: number, annualYield: number) {
   return Math.round((propertyPrice * annualYield) / 10000 / 12);
 }
@@ -34,10 +15,16 @@ function calculateMonthlyRevenue(propertyPrice: number, annualYield: number) {
 interface OnChainProperty {
   id: string;
   name: string;
-  location?: string;
   propertyPrice: number;
   annualYield: number;
   shareToken: string;
+}
+
+interface DistributionEvent {
+  propertyId: string;
+  propertyShares: string;
+  amount: string;
+  timestamp: number;
 }
 
 const AdminRewardsOnChain: React.FC = () => {
@@ -49,8 +36,10 @@ const AdminRewardsOnChain: React.FC = () => {
   const [selectedProperty, setSelectedProperty] = useState('');
   const [rewardPeriod, setRewardPeriod] = useState('');
   const [isDistributing, setIsDistributing] = useState(false);
+  const [recentDistributions, setRecentDistributions] = useState<DistributionEvent[]>([]);
   const { showToast, showModal } = useNotification();
 
+  // Récupérer la liste des propriétés on-chain
   useEffect(() => {
     const fetchProperties = async () => {
       if (!publicClient) {
@@ -77,14 +66,12 @@ const AdminRewardsOnChain: React.FC = () => {
           if (property.owner?.toLowerCase() === PROPERTY_FACTORY_ADDRESS.toLowerCase()) {
             // Métadonnées
             let metadata: any = {};
-            let location = '';
             try {
               const metadataUri = property.uri;
               if (metadataUri && metadataUri.startsWith('http')) {
                 const res = await fetch(metadataUri);
                 if (res.ok) {
                   metadata = await res.json();
-                  location = metadata.location || '';
                 }
               }
             } catch {}
@@ -102,7 +89,6 @@ const AdminRewardsOnChain: React.FC = () => {
             props.push({
               id: `${i}`,
               name: metadata.name || property.name,
-              location,
               propertyPrice,
               annualYield,
               shareToken,
@@ -117,6 +103,44 @@ const AdminRewardsOnChain: React.FC = () => {
     };
     fetchProperties();
   }, [publicClient]);
+
+  // Récupérer les events YieldDistributed sur tous les PropertyShares
+  useEffect(() => {
+    const fetchDistributions = async () => {
+      if (!publicClient || properties.length === 0) return;
+      let allEvents: DistributionEvent[] = [];
+      for (const prop of properties) {
+        try {
+          const logs = await publicClient.getLogs({
+            address: prop.shareToken as `0x${string}`,
+            event: {
+              name: 'YieldDistributed',
+              type: 'event',
+              inputs: [
+                { indexed: false, name: 'propertyId', type: 'uint256' },
+                { indexed: false, name: 'amount', type: 'uint256' },
+                { indexed: false, name: 'timestamp', type: 'uint256' },
+              ],
+            },
+            fromBlock: 'earliest',
+            toBlock: 'latest',
+          });
+          for (const log of logs) {
+            allEvents.push({
+              propertyId: log.args?.propertyId?.toString() ?? 'NaN',
+              propertyShares: prop.shareToken,
+              amount: log.args?.amount ? (Number(log.args.amount) / 1e18).toLocaleString() : 'NaN',
+              timestamp: log.args?.timestamp ? Number(log.args.timestamp) : 0,
+            });
+          }
+        } catch {}
+      }
+      // Trier du plus récent au plus ancien
+      allEvents.sort((a, b) => b.timestamp - a.timestamp);
+      setRecentDistributions(allEvents);
+    };
+    fetchDistributions();
+  }, [publicClient, properties]);
 
   const handleDistribute = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,7 +226,7 @@ const AdminRewardsOnChain: React.FC = () => {
                       <option value="">Choose a property...</option>
                       {properties.map((property) => (
                         <option key={property.id} value={property.id}>
-                          {property.name} - {property.location}
+                          {property.name} - {property.propertyPrice.toLocaleString()}
                         </option>
                       ))}
                     </select>
@@ -282,35 +306,43 @@ const AdminRewardsOnChain: React.FC = () => {
                 </div>
               </div>
             </div>
-            {/* Recent Distributions */}
+            {/* Recent Distributions (on-chain) */}
             <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100">
               <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
                 <CheckCircle className="h-6 w-6 mr-3 text-emerald-600" />
-                Recent Distributions
+                Recent Distributions (on-chain)
               </h3>
               <div className="space-y-6">
-                {recentDistributions.map((distribution) => (
-                  <div key={distribution.id} className="bg-gradient-to-br from-gray-50 to-indigo-50 rounded-2xl p-6 border border-gray-100">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-bold text-gray-900">{distribution.property.name}</h4>
-                      <CheckCircle className="h-5 w-5 text-emerald-500" />
+                {recentDistributions.length === 0 ? (
+                  <div className="text-gray-500">Aucune distribution trouvée.</div>
+                ) : (
+                  recentDistributions.map((distribution, idx) => (
+                    <div key={idx} className="bg-gradient-to-br from-gray-50 to-indigo-50 rounded-2xl p-6 border border-gray-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-bold text-gray-900">Propriété: NaN</h4>
+                        <CheckCircle className="h-5 w-5 text-emerald-500" />
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-2">
+                        <div className="flex justify-between">
+                          <span>Amount:</span>
+                          <span className="font-semibold">${distribution.amount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Period:</span>
+                          <span className="font-semibold">NaN</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Date:</span>
+                          <span className="font-semibold">{distribution.timestamp ? new Date(distribution.timestamp * 1000).toLocaleDateString() : 'NaN'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>PropertyShares:</span>
+                          <span className="font-mono text-xs">{distribution.propertyShares.slice(0, 6)}...{distribution.propertyShares.slice(-4)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600 space-y-2">
-                      <div className="flex justify-between">
-                        <span>Amount:</span>
-                        <span className="font-semibold">${distribution.amount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Period:</span>
-                        <span className="font-semibold">{distribution.period}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Date:</span>
-                        <span className="font-semibold">{distribution.date.toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>

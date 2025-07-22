@@ -38,6 +38,7 @@ import PropertyReview from './pages/admin/PropertyReview';
 import SupabaseConfig from './pages/admin/SupabaseConfig';
 import AdminPropertiesOnChain from './pages/admin/AdminPropertiesOnChain';
 import AdminRewardsOnChain from './pages/admin/AdminRewardsOnChain';
+import AdminRolesOnChain from './pages/admin/AdminRolesOnChain';
 
 // Property Owner pages
 import OwnerDashboard from './pages/owner/OwnerDashboard';
@@ -111,6 +112,7 @@ function App() {
             <Route path="/admin/rewards" element={<AdminRewards />} />
             <Route path="/admin/rewards-onchain" element={<AdminRewardsOnChain />} />
             <Route path="/admin/roles" element={<AdminRoles />} />
+            <Route path="/admin/roles-onchain" element={<AdminRolesOnChain />} />
             <Route path="/admin/validation" element={<PropertyValidation />} />
             <Route path="/admin/validation/:propertyId" element={<PropertyReview />} />
             <Route path="/admin/supabase" element={<SupabaseConfig />} />
