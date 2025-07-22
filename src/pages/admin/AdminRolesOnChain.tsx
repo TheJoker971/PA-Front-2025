@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, UserPlus, Sparkles, Users } from 'lucide-react';
+import { User, Shield, UserPlus, Sparkles, Users, Loader2 } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 import { useWalletClient, useAccount, usePublicClient } from 'wagmi';
 import PropertySharesABI from '../../abi/PropertyShares.json';
 import ImmoPropertyABI from '../../abi/ImmoProperty.json';
+import { useUsersWithPermissions } from '../../hooks/useUsersWithPermissions';
+import { roleService } from '../../services/api';
 
 const YIELD_MANAGER_ROLE = '0x470f4f1717679395b6a9e0700797bfeeaa970f1643e72f5684d687c0be10fe27';
 const ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -21,10 +23,12 @@ const AdminRolesOnChain: React.FC = () => {
   const [isGranting, setIsGranting] = useState(false);
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const [properties, setProperties] = useState<OnChainProperty[]>([]);
+  
   const { showToast, showModal } = useNotification();
   const { data: walletClient } = useWalletClient();
   const { address } = useAccount();
   const publicClient = usePublicClient();
+  const { users, loading: usersLoading, error: usersError, refetch: refetchUsers } = useUsersWithPermissions();
 
   // Récupérer la liste des propriétés on-chain
   useEffect(() => {
@@ -110,27 +114,90 @@ const AdminRolesOnChain: React.FC = () => {
     setNewUserRole('yield_manager');
     setSelectedProperties([]);
     if (successCount > 0) {
-      showToast({
-        type: 'success',
-        title: 'Attribution terminée',
-        message: `${successCount} propriété(s) mises à jour.`
-      });
+      // Créer l'utilisateur dans la base de données avec le rôle approprié
+      try {
+        if (address) {
+          // Déterminer le rôle système basé sur le rôle on-chain
+          let systemRole = 'manager'; // par défaut
+          if (newUserRole === 'admin') {
+            systemRole = 'admin';
+          }
+          
+          console.log('🔄 Appel au backend pour créer l\'utilisateur:', {
+            address,
+            newUserAddress,
+            systemRole
+          });
+          
+          await roleService.assignRole(address, newUserAddress, systemRole);
+          
+          console.log('✅ Utilisateur créé dans la base de données');
+          
+          showToast({
+            type: 'success',
+            title: 'Attribution terminée',
+            message: `${successCount} propriété(s) mises à jour et utilisateur créé dans la base de données.`
+          });
+        } else {
+          showToast({
+            type: 'success',
+            title: 'Attribution terminée',
+            message: `${successCount} propriété(s) mises à jour.`
+          });
+        }
+      } catch (err: any) {
+        console.error('❌ Erreur lors de la création en base de données:', err);
+        showToast({
+          type: 'warning',
+          title: 'Rôles on-chain attribués',
+          message: `${successCount} propriété(s) mises à jour, mais erreur lors de la création en base de données: ${err?.message || 'Erreur inconnue'}`
+        });
+      }
+      
+      // Rafraîchir la liste des utilisateurs
+      refetchUsers();
     }
   };
 
   const handleRoleChange = async (userId: string, newRole: string, userAddress: string) => {
-    showToast({
-      type: 'info',
-      title: 'Mock uniquement',
-      message: 'Le changement de rôle est mock pour l’instant.'
-    });
+    try {
+      if (!address) throw new Error('Wallet not connected');
+      
+      const confirmed = await showModal({
+        type: 'confirm',
+        title: 'Changer le rôle',
+        message: `Changer le rôle de ${userAddress} vers ${newRole} ?`,
+        confirmText: 'Confirmer',
+        cancelText: 'Annuler'
+      });
+      
+      if (!confirmed) return;
+
+      // Créer/modifier l'utilisateur dans la base de données
+      await roleService.assignRole(address, userAddress, newRole);
+      
+      showToast({
+        type: 'success',
+        title: 'Rôle modifié',
+        message: `Le rôle de ${userAddress} a été changé vers ${newRole} dans la base de données.`
+      });
+      
+      // Rafraîchir la liste des utilisateurs
+      refetchUsers();
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Erreur',
+        message: err?.message || 'Impossible de modifier le rôle.'
+      });
+    }
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
         return 'bg-gradient-to-r from-red-500 to-pink-600 text-white';
-      case 'property_manager':
+      case 'manager':
         return 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white';
       case 'yield_manager':
         return 'bg-gradient-to-r from-green-500 to-emerald-600 text-white';
@@ -139,6 +206,14 @@ const AdminRolesOnChain: React.FC = () => {
       default:
         return 'bg-gradient-to-r from-gray-500 to-gray-600 text-white';
     }
+  };
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR');
   };
 
   return (
@@ -227,51 +302,68 @@ const AdminRolesOnChain: React.FC = () => {
                 </button>
               </form>
             </div>
-            {/* Users List (mock) */}
+            {/* Users List */}
             <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
               <div className="p-8 border-b border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center">
                   <Shield className="h-6 w-6 mr-3 text-indigo-600" />
-                  Platform Users (mock)
+                  Platform Users (Read Only)
                 </h2>
+                <p className="text-sm text-gray-600 mt-2">
+                  Liste des utilisateurs avec des rôles spéciaux - Informations uniquement
+                </p>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gradient-to-r from-gray-50 to-indigo-50">
-                    <tr>
-                      <th className="px-8 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
-                        Address
-                      </th>
-                      <th className="px-8 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th className="px-8 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
-                        Added Date
-                      </th>
-                      <th className="px-8 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-100">
-                    {/* Données mock */}
-                    <tr className="hover:bg-gray-50 transition-colors">
-                      <td className="px-8 py-6 whitespace-nowrap">
-                        <div className="text-sm font-bold text-gray-900">0x1234...5678</div>
-                      </td>
-                      <td className="px-8 py-6 whitespace-nowrap">
-                        <span className={`inline-flex px-4 py-2 text-sm font-bold rounded-full ${getRoleColor('admin')}`}>admin</span>
-                      </td>
-                      <td className="px-8 py-6 whitespace-nowrap text-sm font-medium text-gray-900">15/01/2024</td>
-                      <td className="px-8 py-6 whitespace-nowrap text-sm font-medium">
-                        <select className="text-sm border border-gray-300 rounded-xl px-3 py-2 font-medium bg-white hover:bg-gray-50 transition-colors" disabled>
-                          <option>admin</option>
-                        </select>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {usersLoading ? (
+                <div className="flex justify-center items-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                </div>
+              ) : usersError ? (
+                <div className="p-8 text-center text-red-600">
+                  {usersError}
+                </div>
+              ) : users.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  Aucun utilisateur avec des rôles spéciaux trouvé.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gradient-to-r from-gray-50 to-indigo-50">
+                      <tr>
+                        <th className="px-8 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                          Address
+                        </th>
+                        <th className="px-8 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                          Role
+                        </th>
+                        <th className="px-8 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                          Added Date
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {users.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-8 py-6 whitespace-nowrap">
+                            <div className="text-sm font-bold text-gray-900">{formatAddress(user.signature)}</div>
+                            {user.name && (
+                              <div className="text-sm text-gray-500">{user.name}</div>
+                            )}
+                          </td>
+                          <td className="px-8 py-6 whitespace-nowrap">
+                            <span className={`inline-flex px-4 py-2 text-sm font-bold rounded-full ${getRoleColor(user.role)}`}>
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="px-8 py-6 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {formatDate(user.created_at)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
           {/* Role Descriptions */}

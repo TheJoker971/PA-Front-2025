@@ -16,3 +16,4 @@ export async function uploadJson(data: object, folder: string = "metadata"): Pro
   await uploadBytes(fileRef, blob);
   return getDownloadURL(fileRef);
 } 
+ 

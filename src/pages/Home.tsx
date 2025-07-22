@@ -8,6 +8,7 @@ import { ethers } from 'ethers';
 import PropertySharesABI from '../abi/PropertyShares.json';
 import { Property } from '../types';
 
+
 const Home: React.FC = () => {
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,6 +188,8 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+
+
 
       {/* Featured Properties */}
       <section className="py-16 bg-gray-50">

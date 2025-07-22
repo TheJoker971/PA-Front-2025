@@ -1,15 +1,33 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Building2, Sparkles } from 'lucide-react';
+import { Building2, Sparkles, Crown, Shield, User } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useUserRole } from '../../hooks/useUserRole';
 
 const Header: React.FC = () => {
   const location = useLocation();
+  const { role, loading, isAdmin, isManager, isInvestor } = useUserRole();
 
   const isPublicRoute = ['/properties', '/about', '/faq', '/terms', '/privacy'].includes(location.pathname) || location.pathname === '/';
   const isDashboardRoute = location.pathname.startsWith('/dashboard');
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isOwnerRoute = location.pathname.startsWith('/owner');
+
+  const getRoleIcon = () => {
+    if (loading) return null;
+    if (isAdmin) return <Crown className="h-4 w-4 text-yellow-600" />;
+    if (isManager) return <Shield className="h-4 w-4 text-blue-600" />;
+    if (isInvestor) return <User className="h-4 w-4 text-green-600" />;
+    return null;
+  };
+
+  const getRoleText = () => {
+    if (loading) return 'Chargement...';
+    if (isAdmin) return 'Admin';
+    if (isManager) return 'Manager';
+    if (isInvestor) return 'Investor';
+    return '';
+  };
 
   return (
     <header className="bg-white/95 backdrop-blur-sm shadow-xl border-b border-indigo-100 sticky top-0 z-50">
@@ -81,12 +99,21 @@ const Header: React.FC = () => {
                 <Link to="/admin/roles" className="text-gray-700 hover:text-indigo-600 transition-colors font-medium px-4 py-2 rounded-xl hover:bg-indigo-50">
                   Roles
                 </Link>
-
+                <Link to="/admin/validation" className="text-gray-700 hover:text-indigo-600 transition-colors font-medium px-4 py-2 rounded-xl hover:bg-indigo-50">
+                  Validation
+                </Link>
               </>
             )}
           </nav>
 
           <div className="flex items-center space-x-4">
+            {/* Indicateur de rôle */}
+            {role && (
+              <div className="flex items-center space-x-2 px-3 py-1 bg-gray-100 rounded-lg">
+                {getRoleIcon()}
+                <span className="text-sm font-medium text-gray-700">{getRoleText()}</span>
+              </div>
+            )}
             <ConnectButton />
           </div>
         </div>

@@ -221,5 +221,101 @@ export const healthService = {
   },
 };
 
+// Services pour la gestion des rôles
+export const roleService = {
+  /**
+   * Connexion/détection du rôle utilisateur
+   * @param signature - La signature du wallet
+   */
+  connectUser: async (signature: string) => {
+    const response = await apiClient.post('/api/auth/connect', { signature });
+    return response.data; // { user, role, permissions }
+  },
+
+  /**
+   * Récupérer tous les utilisateurs avec leurs permissions (admin uniquement)
+   * @param token - Le token d'authentification (signature)
+   */
+  getUsersWithPermissions: async (token: string) => {
+    const response = await apiClient.get('/api/users/with-permissions', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data; // { users: [...] }
+  },
+
+  /**
+   * Attribuer un rôle à un utilisateur (admin uniquement)
+   * @param token - Le token d'authentification (signature)
+   * @param user_signature - La signature de l'utilisateur à qui attribuer le rôle
+   * @param role - Le rôle système ('admin', 'manager')
+   * @param property_ids - Les IDs des propriétés (optionnel, pour les rôles spécifiques)
+   * @param role_type - Le type de rôle sur la propriété ('yield_manager', 'admin')
+   */
+  assignRole: async (
+    token: string,
+    user_signature: string,
+    role: string,
+    property_ids?: string[],
+    role_type?: string
+  ) => {
+    const payload: any = { user_signature, role };
+    if (property_ids) payload.property_ids = property_ids;
+    if (role_type) payload.role_type = role_type;
+
+    const response = await apiClient.post(
+      '/api/roles/assign',
+      payload,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  },
+};
+
+// Services pour la gestion des distributions
+export const distributionService = {
+  /**
+   * Récupérer l'historique des distributions
+   * @param token - Le token d'authentification (signature)
+   */
+  getDistributions: async (token: string) => {
+    const response = await apiClient.get('/api/distributions', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data; // { distributions: [...] }
+  },
+
+  /**
+   * Récupérer les statistiques des distributions
+   * @param token - Le token d'authentification (signature)
+   */
+  getDistributionStats: async (token: string) => {
+    const response = await apiClient.get('/api/distributions/stats', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data; // { total_distributed, this_quarter, active_properties, total_distributions }
+  },
+
+  /**
+   * Créer une nouvelle distribution
+   * @param token - Le token d'authentification (signature)
+   * @param payload - Les données de la distribution
+   */
+  createDistribution: async (token: string, payload: {
+    property_id: string;
+    property_name: string;
+    amount: string;
+    period: string;
+    distributed_by: string;
+    transaction_hash?: string;
+  }) => {
+    const response = await apiClient.post(
+      '/api/distributions',
+      payload,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  },
+};
+
 // Export de l'instance API pour une utilisation directe si nécessaire
 export default apiClient; 

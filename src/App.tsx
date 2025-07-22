@@ -113,7 +113,7 @@ function App() {
             <Route path="/admin/roles-mock" element={<AdminRoles />} />
             <Route path="/admin/validation" element={<PropertyValidation />} />
             <Route path="/admin/validation/:propertyId" element={<PropertyReview />} />
-    
+            
             {/* 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
