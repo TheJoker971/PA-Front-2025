@@ -1,14 +1,137 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Building2, DollarSign, Users, TrendingUp, Settings, FileText, AlertTriangle, CheckCircle, Sparkles, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { mockProperties } from '../../data/mockData';
+import { usePublicClient } from 'wagmi';
+import ImmoPropertyABI from '../../abi/ImmoProperty.json';
+import PropertySharesABI from '../../abi/PropertyShares.json';
+
+const IMMO_PROPERTY_ADDRESS = import.meta.env.VITE_IMMO_PROPERTY_ADDRESS;
+const PROPERTY_FACTORY_ADDRESS = import.meta.env.VITE_PROPERTY_FACTORY_ADDRESS;
 
 const AdminDashboard: React.FC = () => {
-  const totalProperties = mockProperties.length;
-  const totalValue = mockProperties.reduce((sum, prop) => sum + prop.totalValue, 0);
-  const totalInvestors = 1250; // Mock data
-  const totalRevenueDistributed = 2500000; // Mock data
+  const publicClient = usePublicClient();
+  const [totalProperties, setTotalProperties] = useState(0);
+  const [totalValue, setTotalValue] = useState(0);
+  const [totalRaised, setTotalRaised] = useState(0);
+  const [totalRevenueDistributed, setTotalRevenueDistributed] = useState(0);
+  const [loading, setLoading] = useState(true);
   const pendingApprovals = 2; // Mock data
+
+  useEffect(() => {
+    const fetchOnChainData = async () => {
+      if (!publicClient) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        // Récupérer le nombre total de propriétés
+        const propertiesCount = await publicClient.readContract({
+          address: IMMO_PROPERTY_ADDRESS as `0x${string}`,
+          abi: ImmoPropertyABI.abi,
+          functionName: 'getPropertiesCount',
+        }) as bigint;
+        const count = Number(propertiesCount);
+        setTotalProperties(count);
+
+        // Récupérer les données de chaque propriété
+        let totalValueSum = 0;
+        let totalRaisedSum = 0;
+        let totalRevenueSum = 0;
+
+        for (let i = 1; i <= count; i++) {
+          const property = await publicClient.readContract({
+            address: IMMO_PROPERTY_ADDRESS as `0x${string}`,
+            abi: ImmoPropertyABI.abi,
+            functionName: 'getProperty',
+            args: [BigInt(i)],
+          }) as any;
+
+          if (property.owner?.toLowerCase() === PROPERTY_FACTORY_ADDRESS.toLowerCase()) {
+            // Valeur totale de la propriété
+            const propertyValue = Number(property.price) / 1e18;
+            totalValueSum += propertyValue;
+
+            // Montant levé (tokens vendus)
+            const shareToken = property.shareToken as `0x${string}`;
+            try {
+              const soldShares = Number(await publicClient.readContract({
+                address: shareToken,
+                abi: PropertySharesABI.abi,
+                functionName: 'getSoldShares',
+              }) as bigint);
+              const unitPrice = Number(await publicClient.readContract({
+                address: shareToken,
+                abi: PropertySharesABI.abi,
+                functionName: 'getUnitPrice',
+              }) as bigint) / 1e18;
+              totalRaisedSum += soldShares * unitPrice;
+            } catch {}
+
+            // Revenus distribués (approximation basée sur les événements)
+            try {
+              const currentBlock = await publicClient.getBlockNumber();
+              const fromBlock = currentBlock - 10000n; // 10 000 blocs en arrière
+              
+              const logs = await publicClient.getLogs({
+                address: shareToken,
+                event: {
+                  type: 'event',
+                  name: 'YieldDistributed',
+                  inputs: [
+                    { type: 'uint256', name: 'propertyId', indexed: true },
+                    { type: 'uint256', name: 'amount', indexed: false },
+                    { type: 'uint256', name: 'timestamp', indexed: false }
+                  ]
+                },
+                fromBlock,
+                toBlock: 'latest'
+              });
+
+              const propertyRevenue = logs.reduce((sum, log) => {
+                const amount = Number(log.args.amount) / 1e18;
+                return sum + amount;
+              }, 0);
+              totalRevenueSum += propertyRevenue;
+            } catch {}
+          }
+        }
+
+        setTotalValue(totalValueSum);
+        setTotalRaised(totalRaisedSum);
+        setTotalRevenueDistributed(totalRevenueSum);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données on-chain:', error);
+      }
+      setLoading(false);
+    };
+
+    fetchOnChainData();
+  }, [publicClient]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <div className="inline-flex items-center bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full px-6 py-3 mb-4">
+              <Building2 className="h-5 w-5 text-indigo-600 mr-2" />
+              <span className="text-indigo-800 font-semibold">Admin Dashboard</span>
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-4">
+              Admin Dashboard
+            </h1>
+            <p className="text-xl text-gray-600">
+              Manage properties, users, and platform operations
+            </p>
+          </div>
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50">
@@ -59,13 +182,13 @@ const AdminDashboard: React.FC = () => {
           <div className="group bg-white rounded-3xl shadow-xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 font-medium">Total Investors</p>
+                <p className="text-sm text-gray-600 font-medium">Total Raised</p>
                 <p className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                  {totalInvestors.toLocaleString()}
+                  ${(totalRaised / 1000000).toFixed(1)}M
                 </p>
               </div>
               <div className="bg-gradient-to-r from-cyan-100 to-blue-100 rounded-2xl p-4 group-hover:scale-110 transition-transform duration-300">
-                <Users className="h-8 w-8 text-cyan-600" />
+                <TrendingUp className="h-8 w-8 text-cyan-600" />
               </div>
             </div>
           </div>
@@ -79,7 +202,7 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </div>
               <div className="bg-gradient-to-r from-violet-100 to-purple-100 rounded-2xl p-4 group-hover:scale-110 transition-transform duration-300">
-                <TrendingUp className="h-8 w-8 text-violet-600" />
+                <DollarSign className="h-8 w-8 text-violet-600" />
               </div>
             </div>
           </div>
