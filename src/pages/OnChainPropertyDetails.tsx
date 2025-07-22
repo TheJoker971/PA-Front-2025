@@ -4,22 +4,25 @@ import { MapPin, TrendingUp, Calendar, Users, FileText, Shield, ArrowLeft, Spark
 import { useProperty } from '../hooks/useImmoProperties';
 import { useNotification } from '../context/NotificationContext';
 import PropertySharesABI from '../abi/PropertyShares.json';
-import { useContractRead } from 'wagmi';
+import { useContractRead, useAccount } from 'wagmi';
 import { ethers } from 'ethers';
 import { usePublicClient } from 'wagmi';
 import { useWriteContract } from 'wagmi';
+import { useConnectModal } from '@rainbow-me/rainbowkit';
 
 const OnChainPropertyDetails: React.FC = () => {
   const { propertyId } = useParams<{ propertyId: string }>();
   const { showToast, showModal } = useNotification();
   const [investmentAmount, setInvestmentAmount] = useState(1000);
   const { data, isLoading } = useProperty(Number(propertyId));
+  const { address } = useAccount();
   console.log('OnChainPropertyDetails - propertyId:', propertyId, 'data:', data, 'isLoading:', isLoading);
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [hasTriedLoad, setHasTriedLoad] = useState(false);
   const publicClient = usePublicClient();
   const { writeContract, isPending } = useWriteContract();
+  const { openConnectModal } = useConnectModal();
 
   useEffect(() => {
     if (!data) return;
@@ -139,7 +142,11 @@ const OnChainPropertyDetails: React.FC = () => {
     property.decimals === undefined ||
     property.annualYield === undefined
   ) {
-    return <div>Chargement...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
+      </div>
+    );
   }
   if (!property && hasTriedLoad) return <Navigate to="/not-found" replace />;
 
@@ -147,6 +154,11 @@ const OnChainPropertyDetails: React.FC = () => {
   const tokensForInvestment = Math.floor(investmentAmount / property.tokenPrice);
 
   const handleInvest = async () => {
+    if (!address) {
+      openConnectModal?.();
+      return;
+    }
+    
     const confirmed = await showModal({
       type: 'confirm',
       title: 'Confirmer investissement',
@@ -203,11 +215,11 @@ const OnChainPropertyDetails: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
-          to="/onchain-properties"
+          to="/properties"
           className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-8 group bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
         >
           <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-semibold">Retour aux propriétés on-chain</span>
+          <span className="font-semibold">Retour aux propriétés</span>
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -346,17 +358,20 @@ const OnChainPropertyDetails: React.FC = () => {
                 </div>
                 <button
                   onClick={handleInvest}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 text-center block font-semibold text-lg shadow-xl hover:shadow-indigo-500/25 transform hover:scale-105 mb-4"
+                  className={`w-full py-4 px-6 rounded-2xl transition-all duration-300 text-center block font-semibold text-lg shadow-xl transform hover:scale-105 mb-4 ${
+                    !address 
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-indigo-500/25' 
+                      : isPending 
+                        ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-not-allowed'
+                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-indigo-500/25'
+                  }`}
                   disabled={isPending}
                 >
-                  {isPending ? 'Processing...' : 'Invest Now'}
+                  {isPending ? 'Processing...' : 'Investir'}
                 </button>
                 <div className="mt-6 flex items-center justify-center text-sm text-gray-500 bg-gray-50 rounded-2xl p-4">
                   <Shield className="h-5 w-5 mr-2 text-indigo-600" />
                   <span className="font-medium">Secured by blockchain smart contracts</span>
-                </div>
-                <div className="mt-4 flex items-center justify-center text-xs text-amber-600 bg-amber-50 rounded-xl p-3">
-                  <span className="font-medium">⚠️ Frais de gas élevés sur Sepolia (~0.03 ETH)</span>
                 </div>
               </div>
             </div>

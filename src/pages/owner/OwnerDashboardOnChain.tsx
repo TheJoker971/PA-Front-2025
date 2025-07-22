@@ -5,7 +5,7 @@ import { useAccount, usePublicClient } from 'wagmi';
 import ImmoPropertyABI from '../../abi/ImmoProperty.json';
 
 const IMMO_PROPERTY_ADDRESS = import.meta.env.VITE_IMMO_PROPERTY_ADDRESS;
-const PROPERTY_FACTORY_ADDRESS = '0x836C1C6FE9f544324c6722d65B3206B6a3106A20';
+const PROPERTY_FACTORY_ADDRESS = import.meta.env.VITE_PROPERTY_FACTORY_ADDRESS;
 
 interface OwnerPropertyOnChain {
   id: string;

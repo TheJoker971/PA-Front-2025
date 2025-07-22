@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Building2, DollarSign, Calendar } from 'lucide-react';
+import { TrendingUp, Building2, DollarSign, Calendar, ShoppingCart, Download } from 'lucide-react';
 import { useAccount, usePublicClient } from 'wagmi';
 import ImmoPropertyABI from '../abi/ImmoProperty.json';
 import PropertySharesABI from '../abi/PropertyShares.json';
@@ -8,7 +8,7 @@ import { formatEther } from 'viem';
 import { Abi } from 'viem';
 
 // Adresse du contrat ImmoProperty déployé (à adapter si besoin)
-const IMMO_PROPERTY_ADDRESS = '0x4E167dc630f7fDecB87776eD6f5F0024602Ae37E';
+const IMMO_PROPERTY_ADDRESS = import.meta.env.VITE_IMMO_PROPERTY_ADDRESS;
 
 interface OnChainInvestment {
     id: string;
@@ -22,11 +22,22 @@ interface OnChainInvestment {
     totalReturns: number;
 }
 
+interface OnChainTransaction {
+    id: string;
+    type: 'purchase' | 'claim';
+    propertyName: string;
+    amount: number;
+    timestamp: number;
+    hash: string;
+}
+
 const DashboardOnChain: React.FC = () => {
     const { address } = useAccount();
     const publicClient = usePublicClient();
     const [investments, setInvestments] = useState<OnChainInvestment[]>([]);
+    const [transactions, setTransactions] = useState<OnChainTransaction[]>([]);
     const [loading, setLoading] = useState(true);
+    const [transactionsLoading, setTransactionsLoading] = useState(true);
 
     useEffect(() => {
         const fetchInvestments = async () => {
@@ -120,12 +131,231 @@ const DashboardOnChain: React.FC = () => {
                     }
                 }
                 setInvestments(investmentsOnChain);
-            } catch (err) {
+            } catch (error) {
+                console.error('Erreur lors de la récupération des investissements:', error);
                 setInvestments([]);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
+
+        const fetchTransactions = async () => {
+            if (!address || !publicClient) {
+                setTransactions([]);
+                setTransactionsLoading(false);
+                return;
+            }
+            setTransactionsLoading(true);
+            try {
+                const allTransactions: OnChainTransaction[] = [];
+                
+                // Récupérer le nombre de propriétés
+                const propertiesCount = await publicClient.readContract({
+                    address: IMMO_PROPERTY_ADDRESS,
+                    abi: ImmoPropertyABI.abi,
+                    functionName: 'getPropertiesCount',
+                }) as bigint;
+                const count = Number(propertiesCount);
+
+                // Pour chaque propriété, récupérer les événements
+                for (let i = 1; i <= count; i++) {
+                    try {
+                        // Récupérer les infos de la propriété
+                        const property = await publicClient.readContract({
+                            address: IMMO_PROPERTY_ADDRESS,
+                            abi: ImmoPropertyABI.abi,
+                            functionName: 'getProperty',
+                            args: [BigInt(i)],
+                        }) as any;
+                        
+                        const shareTokenAddress = property.shareToken as `0x${string}`;
+                        if (!shareTokenAddress) continue;
+
+                        // Récupérer le nom de la propriété
+                        let propertyName = property.name;
+                        try {
+                            const metadataUri = property.uri;
+                            if (metadataUri && metadataUri.startsWith('http')) {
+                                const res = await fetch(metadataUri);
+                                if (res.ok) {
+                                    const meta = await res.json();
+                                    propertyName = meta.name || propertyName;
+                                }
+                            }
+                        } catch (e) {
+                            // ignore fetch error
+                        }
+
+                        // Récupérer les événements TokensPurchased
+                        console.log(`Recherche d'événements TokensPurchased pour ${shareTokenAddress} et utilisateur ${address}`);
+                        
+                        // Obtenir le numéro de bloc actuel
+                        const currentBlock = await publicClient.getBlockNumber();
+                        const fromBlock = currentBlock - 10000n; // 10 000 blocs en arrière
+                        
+                        const purchaseLogs = await publicClient.getLogs({
+                            address: shareTokenAddress,
+                            event: {
+                                type: 'event',
+                                name: 'TokensPurchased',
+                                inputs: [
+                                    { type: 'address', name: 'investor', indexed: true },
+                                    { type: 'uint256', name: 'amount', indexed: false },
+                                    { type: 'uint256', name: 'newTotalSupply', indexed: false }
+                                ]
+                            },
+                            args: {
+                                investor: address
+                            },
+                            fromBlock: fromBlock,
+                            toBlock: 'latest'
+                        });
+                        console.log(`Événements TokensPurchased trouvés:`, purchaseLogs);
+
+                        // Récupérer les événements RevenueClaimed
+                        console.log(`Recherche d'événements RevenueClaimed pour ${shareTokenAddress} et utilisateur ${address}`);
+                        const claimLogs = await publicClient.getLogs({
+                            address: shareTokenAddress,
+                            event: {
+                                type: 'event',
+                                name: 'RevenueClaimed',
+                                inputs: [
+                                    { type: 'address', name: 'investor', indexed: true },
+                                    { type: 'uint256', name: 'amount', indexed: false },
+                                    { type: 'uint256', name: 'timestamp', indexed: false }
+                                ]
+                            },
+                            args: {
+                                investor: address
+                            },
+                            fromBlock: fromBlock,
+                            toBlock: 'latest'
+                        });
+                        console.log(`Événements RevenueClaimed trouvés:`, claimLogs);
+
+                        // Méthode alternative : récupérer tous les événements puis filtrer
+                        if (purchaseLogs.length === 0) {
+                            console.log(`Tentative de récupération de tous les événements TokensPurchased...`);
+                            const allPurchaseLogs = await publicClient.getLogs({
+                                address: shareTokenAddress,
+                                event: {
+                                    type: 'event',
+                                    name: 'TokensPurchased',
+                                    inputs: [
+                                        { type: 'address', name: 'investor', indexed: true },
+                                        { type: 'uint256', name: 'amount', indexed: false },
+                                        { type: 'uint256', name: 'newTotalSupply', indexed: false }
+                                    ]
+                                },
+                                fromBlock: fromBlock,
+                                toBlock: 'latest'
+                            });
+                            console.log(`Tous les événements TokensPurchased:`, allPurchaseLogs);
+                            
+                            // Filtrer côté client
+                            const filteredPurchaseLogs = allPurchaseLogs.filter(log => 
+                                log.args.investor?.toLowerCase() === address.toLowerCase()
+                            );
+                            console.log(`Événements filtrés pour l'utilisateur:`, filteredPurchaseLogs);
+                            
+                            // Utiliser les événements filtrés
+                            for (const log of filteredPurchaseLogs) {
+                                const block = await publicClient.getBlock({ blockHash: log.blockHash });
+                                allTransactions.push({
+                                    id: `${log.transactionHash}-purchase`,
+                                    type: 'purchase',
+                                    propertyName,
+                                    amount: Number(log.args.amount) / 1e18,
+                                    timestamp: Number(block.timestamp),
+                                    hash: log.transactionHash
+                                });
+                            }
+                        } else {
+                            // Traiter les événements d'achat (méthode originale)
+                            for (const log of purchaseLogs) {
+                                const block = await publicClient.getBlock({ blockHash: log.blockHash });
+                                allTransactions.push({
+                                    id: `${log.transactionHash}-purchase`,
+                                    type: 'purchase',
+                                    propertyName,
+                                    amount: Number(log.args.amount) / 1e18,
+                                    timestamp: Number(block.timestamp),
+                                    hash: log.transactionHash
+                                });
+                            }
+                        }
+
+                        // Traiter les événements de réclamation
+                        if (claimLogs.length === 0) {
+                            console.log(`Tentative de récupération de tous les événements RevenueClaimed...`);
+                            const allClaimLogs = await publicClient.getLogs({
+                                address: shareTokenAddress,
+                                event: {
+                                    type: 'event',
+                                    name: 'RevenueClaimed',
+                                    inputs: [
+                                        { type: 'address', name: 'investor', indexed: true },
+                                        { type: 'uint256', name: 'amount', indexed: false },
+                                        { type: 'uint256', name: 'timestamp', indexed: false }
+                                    ]
+                                },
+                                fromBlock: fromBlock,
+                                toBlock: 'latest'
+                            });
+                            console.log(`Tous les événements RevenueClaimed:`, allClaimLogs);
+                            
+                            // Filtrer côté client
+                            const filteredClaimLogs = allClaimLogs.filter(log => 
+                                log.args.investor?.toLowerCase() === address.toLowerCase()
+                            );
+                            console.log(`Événements filtrés pour l'utilisateur:`, filteredClaimLogs);
+                            
+                            // Utiliser les événements filtrés
+                            for (const log of filteredClaimLogs) {
+                                const block = await publicClient.getBlock({ blockHash: log.blockHash });
+                                allTransactions.push({
+                                    id: `${log.transactionHash}-claim`,
+                                    type: 'claim',
+                                    propertyName,
+                                    amount: Number(log.args.amount) / 1e18,
+                                    timestamp: Number(block.timestamp),
+                                    hash: log.transactionHash
+                                });
+                            }
+                        } else {
+                            // Traiter les événements de réclamation (méthode originale)
+                            for (const log of claimLogs) {
+                                const block = await publicClient.getBlock({ blockHash: log.blockHash });
+                                allTransactions.push({
+                                    id: `${log.transactionHash}-claim`,
+                                    type: 'claim',
+                                    propertyName,
+                                    amount: Number(log.args.amount) / 1e18,
+                                    timestamp: Number(block.timestamp),
+                                    hash: log.transactionHash
+                                });
+                            }
+                        }
+
+                    } catch (e) {
+                        console.warn(`Erreur lors de la récupération des événements pour la propriété ${i}:`, e);
+                    }
+                }
+
+                // Trier par timestamp (plus récent en premier) et prendre les 5 plus récentes
+                allTransactions.sort((a, b) => b.timestamp - a.timestamp);
+                setTransactions(allTransactions.slice(0, 5));
+
+            } catch (error) {
+                console.error('Erreur lors de la récupération des transactions:', error);
+                setTransactions([]);
+            } finally {
+                setTransactionsLoading(false);
+            }
+        };
+
         fetchInvestments();
+        fetchTransactions();
     }, [address, publicClient]);
 
     const totalInvested = investments.reduce((sum, inv) => sum + inv.totalInvested, 0);
@@ -133,12 +363,29 @@ const DashboardOnChain: React.FC = () => {
     const totalReturns = investments.reduce((sum, inv) => sum + inv.totalReturns, 0);
     const totalProperties = investments.length;
 
+    // Spinner global pendant le chargement initial
+    if (loading || transactionsLoading) {
+        return (
+            <div className="max-w-7xl mx-auto py-8 px-4">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900">Investment Dashboard</h1>
+                    <p className="text-lg text-gray-600 mt-2">
+                        Voici vos investissements immobiliers
+                    </p>
+                </div>
+                <div className="flex justify-center items-center min-h-[400px]">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-7xl mx-auto py-8 px-4">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Investment Dashboard (On-Chain)</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Investment Dashboard</h1>
                 <p className="text-lg text-gray-600 mt-2">
-                    Voici vos investissements immobiliers on-chain
+                    Voici vos investissements immobiliers
                 </p>
             </div>
             {/* Stats Cards */}
@@ -202,7 +449,9 @@ const DashboardOnChain: React.FC = () => {
                     </div>
                     <div className="space-y-4">
                         {loading ? (
-                            <div>Chargement des investissements on-chain...</div>
+                            <div className="flex justify-center items-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                            </div>
                         ) : investments.length === 0 ? (
                             <div>Aucun investissement on-chain trouvé.</div>
                         ) : (
@@ -237,12 +486,50 @@ const DashboardOnChain: React.FC = () => {
                         <button className="text-blue-400 cursor-not-allowed" disabled>View All</button>
                     </div>
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                            <div>
-                                <h3 className="font-semibold text-gray-900 capitalize">Aucune transaction trouvée.</h3>
-                                <p className="text-sm text-gray-600">Vos transactions récentes apparaîtront ici.</p>
+                        {transactionsLoading ? (
+                            <div className="flex justify-center items-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                             </div>
-                        </div>
+                        ) : transactions.length === 0 ? (
+                            <div>Aucune transaction on-chain trouvée.</div>
+                        ) : (
+                            transactions.map((transaction) => (
+                                <div key={transaction.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                    <div className="flex items-center">
+                                        <div className={`p-2 rounded-full mr-3 ${
+                                            transaction.type === 'purchase' 
+                                                ? 'bg-blue-100 text-blue-600' 
+                                                : 'bg-green-100 text-green-600'
+                                        }`}>
+                                            {transaction.type === 'purchase' ? (
+                                                <ShoppingCart className="h-4 w-4" />
+                                            ) : (
+                                                <Download className="h-4 w-4" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900">{transaction.propertyName}</h3>
+                                            <p className="text-sm text-gray-600">
+                                                {transaction.type === 'purchase' ? 'Achat de tokens' : 'Réclamation de revenus'}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {new Date(transaction.timestamp * 1000).toLocaleDateString('fr-FR')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className={`font-semibold ${
+                                            transaction.type === 'purchase' ? 'text-blue-600' : 'text-green-600'
+                                        }`}>
+                                            {transaction.type === 'purchase' ? '-' : '+'}${transaction.amount.toFixed(2)}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {transaction.hash.substring(0, 8)}...{transaction.hash.substring(transaction.hash.length - 6)}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>

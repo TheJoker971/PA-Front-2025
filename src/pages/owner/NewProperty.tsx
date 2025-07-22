@@ -13,7 +13,7 @@ import { useAccount, useWriteContract } from 'wagmi';
 // import { config } from '../../providers/Web3Provider';
 
 // Adresse du contrat PropertyFactory (à adapter si besoin)
-const PROPERTY_FACTORY_ADDRESS = '0x836C1C6FE9f544324c6722d65B3206B6a3106A20'; // Adresse réelle déployée
+const PROPERTY_FACTORY_ADDRESS = import.meta.env.VITE_PROPERTY_FACTORY_ADDRESS; // Adresse réelle déployée
 
 const NewProperty: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -31,6 +31,14 @@ const NewProperty: React.FC = () => {
   const { showToast, showModal } = useNotification();
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
+  
+  // Logs de debug au chargement de la page
+  console.log('=== DEBUG PAGE LOAD (OWNER) ===');
+  console.log('Adresse du wallet connecté:', address);
+  console.log('Adresse du contrat PropertyFactory:', PROPERTY_FACTORY_ADDRESS);
+  console.log('ABI PropertyFactory chargée:', PropertyFactoryABI.abi ? 'OUI' : 'NON');
+  console.log('ABI PropertyFactory contient createFullProperty:', PropertyFactoryABI.abi?.find((item: any) => item.name === 'createFullProperty') ? 'OUI' : 'NON');
+  console.log('=================================');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +113,13 @@ const NewProperty: React.FC = () => {
         totalValue,    // propertyPrice
         address        // admin
       ];
-      console.log('Appel on-chain createFullProperty', args);
+      console.log('=== DEBUG CREATE PROPERTY (OWNER) ===');
+      console.log('Adresse du wallet connecté:', address);
+      console.log('Adresse du contrat PropertyFactory:', PROPERTY_FACTORY_ADDRESS);
+      console.log('Paramètres envoyés:', args);
+      console.log('ABI utilisée:', PropertyFactoryABI.abi);
+      console.log('=====================================');
+      
       try {
         const tx = await writeContractAsync({
           address: PROPERTY_FACTORY_ADDRESS,

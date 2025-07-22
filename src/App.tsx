@@ -16,7 +16,6 @@ import NotFound from './pages/NotFound';
 import StyleGuide from './pages/StyleGuide';
 import TestFirebaseUpload from './pages/TestFirebaseUpload';
 import OnChainProperties from './pages/OnChainProperties';
-import TestWrite from './pages/TestWrite';
 import OnChainPropertyDetails from './pages/OnChainPropertyDetails';
 
 // Dashboard pages
@@ -79,40 +78,39 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Home />} />
-            <Route path="/properties" element={<Properties />} />
-              <Route path="/onchain-properties" element={<OnChainProperties />} />
-              <Route path="/onchain-properties/:propertyId" element={<OnChainPropertyDetails />} />
-            <Route path="/properties/:propertyId" element={<PropertyDetails />} />
+            <Route path="/properties" element={<OnChainProperties />} />
+            <Route path="/properties/:propertyId" element={<OnChainPropertyDetails />} />
+            <Route path="/properties-mock" element={<Properties />} />
+            <Route path="/properties-mock/:propertyId" element={<PropertyDetails />} />
             <Route path="/about" element={<About />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/style" element={<StyleGuide />} />
-              <Route path="/test-firebase-upload" element={<TestFirebaseUpload />} />
-              <Route path="/test-write" element={<TestWrite />} />
+            <Route path="/test-firebase-upload" element={<TestFirebaseUpload />} />
             {/* Dashboard routes */}
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard-onchain" element={<DashboardOnChain />} />
-            <Route path="/dashboard/properties" element={<DashboardProperties />} />
-            <Route path="/dashboard/properties-onchain" element={<DashboardPropertiesOnChain />} />
+            <Route path="/dashboard" element={<DashboardOnChain />} />
+            <Route path="/dashboard-mock" element={<Dashboard />} />
+            <Route path="/dashboard/properties" element={<DashboardPropertiesOnChain />} />
+            <Route path="/dashboard/properties-mock" element={<DashboardProperties />} />
             <Route path="/dashboard/claims" element={<Claims />} />
             <Route path="/dashboard/transactions" element={<Transactions />} />
             {/* Property Owner routes */}
-            <Route path="/owner" element={<OwnerDashboard />} />
-            <Route path="/owner-onchain" element={<OwnerDashboardOnChain />} />
-            <Route path="/owner/properties" element={<OwnerProperties />} />
-            <Route path="/owner/properties-onchain" element={<OwnerPropertiesOnChain />} />
+            <Route path="/owner" element={<OwnerDashboardOnChain />} />
+            <Route path="/owner-mock" element={<OwnerDashboard />} />
+            <Route path="/owner/properties" element={<OwnerPropertiesOnChain />} />
+            <Route path="/owner/properties-mock" element={<OwnerProperties />} />
             <Route path="/owner/properties/new" element={<OwnerNewProperty />} />
             <Route path="/owner/properties/edit/:propertyId" element={<EditProperty />} />
             {/* Admin routes */}
             <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/properties" element={<AdminProperties />} />
-            <Route path="/admin/properties-onchain" element={<AdminPropertiesOnChain />} />
+            <Route path="/admin/properties" element={<AdminPropertiesOnChain />} />
+            <Route path="/admin/properties-mock" element={<AdminProperties />} />
             <Route path="/admin/properties/new" element={<NewProperty />} />
-            <Route path="/admin/rewards" element={<AdminRewards />} />
-            <Route path="/admin/rewards-onchain" element={<AdminRewardsOnChain />} />
-            <Route path="/admin/roles" element={<AdminRoles />} />
-            <Route path="/admin/roles-onchain" element={<AdminRolesOnChain />} />
+            <Route path="/admin/rewards" element={<AdminRewardsOnChain />} />
+            <Route path="/admin/rewards-mock" element={<AdminRewards />} />
+            <Route path="/admin/roles" element={<AdminRolesOnChain />} />
+            <Route path="/admin/roles-mock" element={<AdminRoles />} />
             <Route path="/admin/validation" element={<PropertyValidation />} />
             <Route path="/admin/validation/:propertyId" element={<PropertyReview />} />
             <Route path="/admin/supabase" element={<SupabaseConfig />} />

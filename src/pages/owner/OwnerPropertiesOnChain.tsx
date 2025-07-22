@@ -6,7 +6,7 @@ import { usePublicClient } from 'wagmi';
 import ImmoPropertyABI from '../../abi/ImmoProperty.json';
 
 const IMMO_PROPERTY_ADDRESS = import.meta.env.VITE_IMMO_PROPERTY_ADDRESS;
-const PROPERTY_FACTORY_ADDRESS = '0x836C1C6FE9f544324c6722d65B3206B6a3106A20';
+const PROPERTY_FACTORY_ADDRESS = import.meta.env.VITE_PROPERTY_FACTORY_ADDRESS;
 
 interface OwnerPropertyOnChain {
   id: string;
@@ -243,7 +243,9 @@ const OwnerPropertiesOnChain: React.FC = () => {
         {/* Properties Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {loading ? (
-            <div>Chargement des propriétés on-chain...</div>
+            <div className="col-span-full flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
+            </div>
           ) : filteredProperties.length === 0 ? (
             <div>Aucune propriété on-chain trouvée.</div>
           ) : (

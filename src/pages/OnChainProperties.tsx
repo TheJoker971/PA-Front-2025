@@ -9,18 +9,45 @@ import { usePublicClient } from 'wagmi';
 
 const OnChainProperties: React.FC = () => {
   const { data: count, isLoading: isCountLoading } = usePropertiesCount();
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   console.log('OnChainProperties - count:', count, 'isLoading:', isCountLoading);
 
-  if (isCountLoading) return <div>Chargement du nombre de propriétés...</div>;
-  if (!count || Number(count) === 0) return <div>Aucune propriété on-chain.</div>;
+  useEffect(() => {
+    if (!isCountLoading) {
+      setIsInitialLoading(false);
+    }
+  }, [isCountLoading]);
+
+  if (isInitialLoading) return (
+    <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
+    </div>
+  );
+  
+  if (!isInitialLoading && (!count || Number(count) === 0)) return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">Investment Properties</h1>
+        <p className="text-lg text-gray-600">
+          Découvrez des opportunités immobilières tokenisées du monde entier
+        </p>
+      </div>
+      <div className="flex justify-center items-center py-20">
+        <div className="flex flex-col items-center space-y-4">
+          <p className="text-gray-600 font-medium text-xl">Aucune propriété on-chain trouvée.</p>
+          <p className="text-gray-500">Créez votre première propriété pour commencer.</p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Propriétés On-Chain</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">Investment Properties</h1>
         <p className="text-lg text-gray-600">
-          Affichage identique aux propriétés mock, mais données 100% blockchain
+          Découvrez des opportunités immobilières tokenisées du monde entier
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -130,7 +157,11 @@ const OnChainPropertyCard: React.FC<{ propertyId: number }> = ({ propertyId }) =
     console.log('OnChainPropertyCard - property:', property, 'loading:', loading, 'isLoading:', isLoading);
   }, [property, loading, isLoading]);
 
-  if (isLoading || loading || !property) return <div>Chargement propriété on-chain...</div>;
+  if (isLoading || loading || !property) return (
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    </div>
+  );
   return <PropertyCard property={property} />;
 };
 

@@ -105,7 +105,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
         
         <div className="mt-8">
           <Link
-            to={property.tokenAddress ? `/onchain-properties/${property.id}` : `/properties/${property.id}`}
+            to={property.tokenAddress ? `/properties/${property.id}` : `/properties-mock/${property.id}`}
             className="group/btn w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 text-center block font-semibold text-lg shadow-xl hover:shadow-indigo-500/25 transform hover:scale-105"
           >
             <span className="flex items-center justify-center">

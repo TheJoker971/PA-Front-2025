@@ -1,11 +1,139 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Sparkles, Shield, Users, MapPin, TrendingUp } from 'lucide-react';
-import { mockProperties } from '../data/mockData';
 import EnvironmentWarning from '../components/common/EnvironmentWarning';
+import { usePropertiesCount, useProperty } from '../hooks/useImmoProperties';
+import { usePublicClient } from 'wagmi';
+import { ethers } from 'ethers';
+import PropertySharesABI from '../abi/PropertyShares.json';
+import { Property } from '../types';
 
 const Home: React.FC = () => {
-  const featuredProperties = mockProperties.slice(0, 3);
+  const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { data: count } = usePropertiesCount();
+  const publicClient = usePublicClient();
+
+  useEffect(() => {
+    const fetchOnChainProperties = async () => {
+      if (!count || Number(count) === 0 || !publicClient) {
+        // Pas de propriétés on-chain, garder le spinner
+        setFeaturedProperties([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const properties: Property[] = [];
+        const maxProperties = Math.min(Number(count), 3); // Prendre max 3 propriétés
+
+        for (let i = 1; i <= maxProperties; i++) {
+          try {
+            const propertyData = await publicClient.readContract({
+              address: import.meta.env.VITE_IMMO_PROPERTY_ADDRESS as `0x${string}`,
+              abi: [
+                {
+                  name: 'getProperty',
+                  type: 'function',
+                  inputs: [{ name: 'propertyId', type: 'uint256' }],
+                  outputs: [
+                    {
+                      name: '',
+                      type: 'tuple',
+                      components: [
+                        { name: 'name', type: 'string' },
+                        { name: 'uri', type: 'string' },
+                        { name: 'price', type: 'uint256' },
+                        { name: 'totalShares', type: 'uint256' },
+                        { name: 'owner', type: 'address' },
+                        { name: 'shareToken', type: 'address' }
+                      ]
+                    }
+                  ],
+                  stateMutability: 'view'
+                }
+              ],
+              functionName: 'getProperty',
+              args: [BigInt(i)]
+            });
+
+            const tuple = propertyData as any;
+            
+            // Récupérer les métadonnées depuis l'URI
+            let metadata = {};
+            try {
+              const response = await fetch(tuple.uri);
+              if (response.ok) {
+                metadata = await response.json();
+              }
+            } catch (e) {
+              console.warn('Impossible de récupérer les métadonnées pour la propriété', i);
+            }
+
+            // Récupérer les données du PropertyShares
+            const shareToken = tuple.shareToken as `0x${string}`;
+            let unitPrice = 0;
+            let annualYield = 0;
+            let availableTokens = 0;
+            let totalTokens = 0;
+
+            if (shareToken && publicClient) {
+              try {
+                const provider = new ethers.providers.JsonRpcProvider(publicClient.transport.url);
+                const contract = new ethers.Contract(shareToken, PropertySharesABI.abi, provider);
+                
+                const [unitPriceData, annualYieldData, totalSupplyData, maxSupplyData] = await Promise.all([
+                  contract.getUnitPrice(),
+                  contract.getAnnualYield(),
+                  contract.totalSupply(),
+                  contract.MAX_SUPPLY()
+                ]);
+
+                unitPrice = Number(unitPriceData) / 1e18;
+                annualYield = Number(annualYieldData) / 100;
+                totalTokens = Number(totalSupplyData) / 1e18;
+                availableTokens = Number(maxSupplyData) / 1e18 - totalTokens;
+              } catch (e) {
+                console.warn('Impossible de récupérer les données PropertyShares pour la propriété', i);
+              }
+            }
+
+            const property: Property = {
+              id: i.toString(),
+              name: tuple.name || 'Propriété ' + i,
+              image: (metadata as any)?.mainImage || (metadata as any)?.image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1073&q=80',
+              imageUrl: (metadata as any)?.mainImage || (metadata as any)?.image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1073&q=80',
+              location: (metadata as any)?.location || 'Localisation non spécifiée',
+              propertyType: (metadata as any)?.propertyType || 'Résidentiel',
+              status: 'active',
+              description: (metadata as any)?.description || 'Description non disponible',
+              totalValue: Number(tuple.price) / 1e18,
+              tokenPrice: unitPrice,
+              annualYield: annualYield,
+              availableTokens: availableTokens,
+              totalTokens: totalTokens,
+              tokenAddress: shareToken,
+              price: Number(tuple.price) / 1e18,
+            };
+
+            properties.push(property);
+          } catch (e) {
+            console.warn('Erreur lors de la récupération de la propriété', i, e);
+          }
+        }
+
+        setFeaturedProperties(properties);
+      } catch (e) {
+        console.error('Erreur lors de la récupération des propriétés on-chain:', e);
+        // Pas de fallback vers les données mock
+        setFeaturedProperties([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOnChainProperties();
+  }, [count, publicClient]);
 
   return (
     <div>
@@ -69,12 +197,33 @@ const Home: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredProperties.map((property) => (
-              <Link 
-                to={`/properties/${property.id}`} 
-                key={property.id}
-                className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 group"
-              >
+            {loading ? (
+              // Spinner de chargement au centre
+              <div className="col-span-full flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : featuredProperties.length === 0 ? (
+              // Aucune propriété on-chain trouvée
+              <div className="col-span-full text-center py-20">
+                <div className="bg-white rounded-xl p-8 shadow-lg">
+                  <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Aucune propriété on-chain disponible</h3>
+                  <p className="text-gray-600 mb-6">Les propriétés en vedette apparaîtront ici une fois qu'elles seront créées sur la blockchain.</p>
+                  <Link 
+                    to="/properties" 
+                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    Voir toutes les propriétés
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              featuredProperties.map((property) => (
+                <Link 
+                  to={property.tokenAddress ? `/properties/${property.id}` : `/properties-mock/${property.id}`} 
+                  key={property.id}
+                  className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 group"
+                >
                 <div className="relative h-64 overflow-hidden">
                   <img 
                     src={property.image} 
@@ -102,17 +251,18 @@ const Home: React.FC = () => {
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-indigo-600 h-2 rounded-full" 
-                        style={{ width: `${((property.totalTokens - property.availableTokens) / property.totalTokens) * 100}%` }}
+                        style={{ width: `${property.totalTokens && property.availableTokens ? ((property.totalTokens - property.availableTokens) / property.totalTokens) * 100 : 0}%` }}
                       ></div>
                     </div>
                     <div className="flex justify-between text-sm text-gray-500 mt-2">
-                      <span>{Math.round(((property.totalTokens - property.availableTokens) / property.totalTokens) * 100)}% financé</span>
-                      <span>{property.availableTokens} tokens restants</span>
+                      <span>{property.totalTokens && property.availableTokens ? Math.round(((property.totalTokens - property.availableTokens) / property.totalTokens) * 100) : 0}% financé</span>
+                      <span>{property.availableTokens || 0} tokens restants</span>
                     </div>
                   </div>
                 </div>
               </Link>
-            ))}
+            ))
+            )}
           </div>
           
           <div className="text-center mt-12">
@@ -120,7 +270,7 @@ const Home: React.FC = () => {
               to="/properties" 
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
             >
-              Voir toutes les propriétés
+              Voir toutes les propriétés on-chain
             </Link>
           </div>
         </div>
