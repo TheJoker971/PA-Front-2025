@@ -81,9 +81,7 @@ const Header: React.FC = () => {
                 <Link to="/admin/roles" className="text-gray-700 hover:text-indigo-600 transition-colors font-medium px-4 py-2 rounded-xl hover:bg-indigo-50">
                   Roles
                 </Link>
-                <Link to="/admin/supabase" className="text-gray-700 hover:text-indigo-600 transition-colors font-medium px-4 py-2 rounded-xl hover:bg-indigo-50">
-                  Supabase
-                </Link>
+
               </>
             )}
           </nav>

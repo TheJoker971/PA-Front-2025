@@ -34,7 +34,7 @@ import AdminRewards from './pages/admin/AdminRewards';
 import AdminRoles from './pages/admin/AdminRoles';
 import PropertyValidation from './pages/admin/PropertyValidation';
 import PropertyReview from './pages/admin/PropertyReview';
-import SupabaseConfig from './pages/admin/SupabaseConfig';
+
 import AdminPropertiesOnChain from './pages/admin/AdminPropertiesOnChain';
 import AdminRewardsOnChain from './pages/admin/AdminRewardsOnChain';
 import AdminRolesOnChain from './pages/admin/AdminRolesOnChain';
@@ -113,7 +113,7 @@ function App() {
             <Route path="/admin/roles-mock" element={<AdminRoles />} />
             <Route path="/admin/validation" element={<PropertyValidation />} />
             <Route path="/admin/validation/:propertyId" element={<PropertyReview />} />
-            <Route path="/admin/supabase" element={<SupabaseConfig />} />
+    
             {/* 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

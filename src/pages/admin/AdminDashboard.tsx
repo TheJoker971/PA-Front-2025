@@ -186,20 +186,7 @@ const AdminDashboard: React.FC = () => {
             </div>
           </Link>
           
-          <Link
-            to="/admin/supabase"
-            className="group bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100"
-          >
-            <div className="flex items-center">
-              <div className="bg-gradient-to-r from-cyan-100 to-blue-100 rounded-2xl p-4 mr-6 group-hover:scale-110 transition-transform duration-300">
-                <Zap className="h-8 w-8 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Supabase Config</h3>
-                <p className="text-gray-600">Configure storage and fix CORS issues</p>
-              </div>
-            </div>
-          </Link>
+
         </div>
 
         {/* Recent Activity */}
