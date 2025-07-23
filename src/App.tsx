@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { NotificationProvider } from './context/NotificationContext';
 import Layout from './components/Layout/Layout';
 import { Web3Provider } from './providers/Web3Provider';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
 
 // Public pages
 import Home from './pages/Home';
@@ -17,6 +18,11 @@ import StyleGuide from './pages/StyleGuide';
 import TestFirebaseUpload from './pages/TestFirebaseUpload';
 import OnChainProperties from './pages/OnChainProperties';
 import OnChainPropertyDetails from './pages/OnChainPropertyDetails';
+
+// Testing components
+import ApiExample from './components/examples/ApiExample';
+import RoleGuardExample from './components/examples/RoleGuardExample';
+import WalletAuthExample from './components/examples/WalletAuthExample';
 
 // Dashboard pages
 import Dashboard from './pages/Dashboard';
@@ -88,6 +94,9 @@ function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/style" element={<StyleGuide />} />
             <Route path="/test-firebase-upload" element={<TestFirebaseUpload />} />
+            <Route path="/test-api" element={<ApiExample />} />
+            <Route path="/test-roles" element={<RoleGuardExample />} />
+            <Route path="/test-wallet" element={<WalletAuthExample />} />
             {/* Dashboard routes */}
             <Route path="/dashboard" element={<DashboardOnChain />} />
             <Route path="/dashboard-mock" element={<Dashboard />} />
@@ -96,23 +105,87 @@ function App() {
             <Route path="/dashboard/claims" element={<Claims />} />
             <Route path="/dashboard/transactions" element={<Transactions />} />
             {/* Property Owner routes */}
-            <Route path="/owner" element={<OwnerDashboardOnChain />} />
-            <Route path="/owner-mock" element={<OwnerDashboard />} />
-            <Route path="/owner/properties" element={<OwnerPropertiesOnChain />} />
-            <Route path="/owner/properties-mock" element={<OwnerProperties />} />
-            <Route path="/owner/properties/new" element={<OwnerNewProperty />} />
-            <Route path="/owner/properties/edit/:propertyId" element={<EditProperty />} />
+            <Route path="/owner" element={
+              <ProtectedRoute requiredRoles={['manager', 'admin']}>
+                <OwnerDashboardOnChain />
+              </ProtectedRoute>
+            } />
+            <Route path="/owner-mock" element={
+              <ProtectedRoute requiredRoles={['manager', 'admin']}>
+                <OwnerDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/owner/properties" element={
+              <ProtectedRoute requiredRoles={['manager', 'admin']}>
+                <OwnerPropertiesOnChain />
+              </ProtectedRoute>
+            } />
+            <Route path="/owner/properties-mock" element={
+              <ProtectedRoute requiredRoles={['manager', 'admin']}>
+                <OwnerProperties />
+              </ProtectedRoute>
+            } />
+            <Route path="/owner/properties/new" element={
+              <ProtectedRoute requiredRoles={['manager', 'admin']}>
+                <OwnerNewProperty />
+              </ProtectedRoute>
+            } />
+            <Route path="/owner/properties/edit/:propertyId" element={
+              <ProtectedRoute requiredRoles={['manager', 'admin']}>
+                <EditProperty />
+              </ProtectedRoute>
+            } />
             {/* Admin routes */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/properties" element={<AdminPropertiesOnChain />} />
-            <Route path="/admin/properties-mock" element={<AdminProperties />} />
-            <Route path="/admin/properties/new" element={<NewProperty />} />
-            <Route path="/admin/rewards" element={<AdminRewardsOnChain />} />
-            <Route path="/admin/rewards-mock" element={<AdminRewards />} />
-            <Route path="/admin/roles" element={<AdminRolesOnChain />} />
-            <Route path="/admin/roles-mock" element={<AdminRoles />} />
-            <Route path="/admin/validation" element={<PropertyValidation />} />
-            <Route path="/admin/validation/:propertyId" element={<PropertyReview />} />
+            <Route path="/admin" element={
+              <ProtectedRoute requiredRoles="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/properties" element={
+              <ProtectedRoute requiredRoles="admin">
+                <AdminPropertiesOnChain />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/properties-mock" element={
+              <ProtectedRoute requiredRoles="admin">
+                <AdminProperties />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/properties/new" element={
+              <ProtectedRoute requiredRoles="admin">
+                <NewProperty />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/rewards" element={
+              <ProtectedRoute requiredRoles="admin">
+                <AdminRewardsOnChain />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/rewards-mock" element={
+              <ProtectedRoute requiredRoles="admin">
+                <AdminRewards />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/roles" element={
+              <ProtectedRoute requiredRoles="admin">
+                <AdminRolesOnChain />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/roles-mock" element={
+              <ProtectedRoute requiredRoles="admin">
+                <AdminRoles />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/validation" element={
+              <ProtectedRoute requiredRoles="admin">
+                <PropertyValidation />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/validation/:propertyId" element={
+              <ProtectedRoute requiredRoles="admin">
+                <PropertyReview />
+              </ProtectedRoute>
+            } />
             
             {/* 404 route */}
             <Route path="*" element={<NotFound />} />
